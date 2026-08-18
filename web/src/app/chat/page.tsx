@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
 import { ChatMessageView } from "./components/chat-message";
-import { ChatSidebar } from "./components/chat-sidebar";
 import { streamChatCompletion } from "./components/stream";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +18,7 @@ import {
 import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
 import webConfig from "@/constants/common-env";
 import { useAuthGuard } from "@/lib/use-auth-guard";
+import { useSidebarCallbacks } from "@/components/sidebar-shell";
 import {
   clearChatConversations,
   deleteChatConversation,
@@ -125,6 +125,7 @@ function ChatPageContent() {
   const streamingRef = useRef(false);
   const didLoadRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sidebarCallbacks = useSidebarCallbacks();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -143,6 +144,19 @@ function ChatPageContent() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
+
+  // Register sidebar callbacks
+  useEffect(() => {
+    const c = sidebarCallbacks.current;
+    c.conversations = conversations;
+    c.selectedConversationId = selectedConversationId;
+    c.onSelectConversation = handleSelectConversation;
+    c.onCreateDraft = handleCreateDraft;
+    c.onDeleteConversation = handleDeleteConversation;
+    c.onRenameConversation = handleRenameConversation;
+    c.formatConversationTime = formatConversationTime;
+    (window as any).__sidebarTriggerUpdate?.();
+  });
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedConversationId) ?? null,
@@ -236,7 +250,8 @@ function ChatPageContent() {
         if (cancelled) {
           return;
         }
-        const options = ["auto", ...chatModels];
+        const uniqueChat = chatModels.filter((id: string) => id.toLowerCase() !== "auto");
+        const options = ["auto", ...uniqueChat];
         setModels(options);
         const storedModel =
           typeof window !== "undefined" ? window.localStorage.getItem(CHAT_MODEL_STORAGE_KEY) : null;
@@ -703,52 +718,7 @@ function ChatPageContent() {
 
   return (
     <>
-      <section className="mx-auto grid h-[calc(100dvh-6.5rem)] min-h-0 w-full max-w-[1380px] grid-cols-1 gap-2 overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-5.25rem)] sm:gap-3 sm:px-3 sm:pb-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <div className="hidden h-full min-h-0 border-r border-stone-200/70 pr-3 lg:block">
-          <ChatSidebar
-            conversations={conversations}
-            isLoadingHistory={isLoadingHistory}
-            selectedConversationId={selectedConversationId}
-            onCreateDraft={handleCreateDraft}
-            onClearHistory={handleClearHistory}
-            onSelectConversation={handleSelectConversation}
-            onDeleteConversation={handleDeleteConversation}
-            onRenameConversation={handleRenameConversation}
-            formatConversationTime={formatConversationTime}
-          />
-        </div>
-
-        <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-          <DialogContent className="flex h-[min(82dvh,760px)] w-[92vw] max-w-[460px] flex-col overflow-hidden rounded-[32px] border-white/80 bg-white p-0 shadow-[0_32px_110px_-38px_rgba(15,23,42,0.45)] sm:rounded-[36px]">
-            <DialogHeader className="px-6 pt-7 pb-4 sm:px-8">
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
-                <History className="size-5" />
-                Chat History
-              </DialogTitle>
-            </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-8">
-              <ChatSidebar
-                conversations={conversations}
-                isLoadingHistory={isLoadingHistory}
-                selectedConversationId={selectedConversationId}
-                onCreateDraft={() => {
-                  handleCreateDraft();
-                  setIsHistoryOpen(false);
-                }}
-                onClearHistory={handleClearHistory}
-                onSelectConversation={(id) => {
-                  handleSelectConversation(id);
-                  setIsHistoryOpen(false);
-                }}
-                onDeleteConversation={handleDeleteConversation}
-                onRenameConversation={handleRenameConversation}
-                formatConversationTime={formatConversationTime}
-                hideActionButtons
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-
+      <section className="mx-auto grid h-[calc(100dvh-2rem)] min-h-0 w-full overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-3rem)] sm:px-3 sm:pb-6">
         <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 px-1 lg:hidden">
             <Button
@@ -800,7 +770,7 @@ function ChatPageContent() {
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-stone-950 text-white shadow-sm dark:bg-white dark:text-stone-950">
+                  <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg dark:from-stone-200 dark:to-stone-400 dark:text-stone-950">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-6">
                       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                     </svg>

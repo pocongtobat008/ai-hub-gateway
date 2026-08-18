@@ -23,13 +23,13 @@ export function SkillPanel() {
   const apiBaseUrl = configuredBaseUrl || webConfig.apiUrl.replace(/\/$/, "") || browserBaseUrl;
 
   const skill = useMemo(() => `---
-name: chatgpt2api-search
+name: becomeai-search
 description: Use when current web search is needed through this chatgpt2api server. Call the configured HTTP search endpoint with a prompt and return the answer with source URLs.
 ---
 
 # ChatGPT2API Search
 
-Use this skill when the user asks for current web search, online lookup, recent information, or source-backed answers. It calls the local chatgpt2api search endpoint and returns an answer with source links.
+Use this skill when the user asks for current web search, online lookup, recent information, or source-backed answers. It calls the local BecomeAI search endpoint and returns an answer with source links.
 
 ## When to use
 
@@ -63,7 +63,7 @@ JSON body:
 
 Requirements:
 1. Install this as a local skill according to the skill installation rules of your current environment.
-2. Skill name: chatgpt2api-search
+2. Skill name: becomeai-search
 3. File name: SKILL.md
 4. If you cannot determine the local skills directory, tell me which directory is required before writing files.
 5. Only create or update this skill file. Do not modify unrelated files.

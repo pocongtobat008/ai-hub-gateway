@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowUp, ImagePlus, Square, X } from "lucide-react";
+import { ArrowUp, Atom, Check, Clapperboard, Compass, ImagePlus, Layers, Square, Wand2, X } from "lucide-react";
 import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -31,12 +32,12 @@ export type ComposerAccount = {
 
 export type ComposerTool = "auto" | "image" | "canvas" | "video" | "research";
 
-export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: string }> = [
-  { value: "auto", label: "Auto", icon: "🤖" },
-  { value: "image", label: "Image", icon: "🎨" },
-  { value: "canvas", label: "Canvas", icon: "📐" },
-  { value: "video", label: "Video", icon: "🎬" },
-  { value: "research", label: "Research", icon: "🔬" },
+export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: React.ElementType; desc: string }> = [
+  { value: "auto", label: "Auto", icon: Atom, desc: "Let AI decide the best model" },
+  { value: "image", label: "Image Gen", icon: Layers, desc: "Generate images with AI" },
+  { value: "canvas", label: "Canvas", icon: Compass, desc: "Edit or create on canvas" },
+  { value: "video", label: "Video", icon: Clapperboard, desc: "Generate video with Veo" },
+  { value: "research", label: "Research", icon: Wand2, desc: "Deep research with Gemini" },
 ];
 
 type ChatComposerProps = {
@@ -98,6 +99,10 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [toolOpen, setToolOpen] = useState(false);
+
+  const selectedTool = TOOL_OPTIONS.find((t) => t.value === tool) || TOOL_OPTIONS[0];
+  const selectedModelLabel = model || "auto";
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
@@ -136,8 +141,6 @@ export function ChatComposer({
     if (imageFiles.length === 0) return;
     void onImagesChange(imageFiles);
   };
-
-  const selectedModelLabel = model || "auto";
 
   return (
     <div className="shrink-0 flex justify-center px-1 sm:px-0">
@@ -179,7 +182,7 @@ export function ChatComposer({
         <div
           className={cn(
             "chat-input-wrapper overflow-hidden rounded-[24px] transition-all duration-300 sm:rounded-[32px]",
-            isDragging && "border-stone-900 bg-stone-50 dark:border-white/20 dark:bg-white/5",
+            isDragging && "border-violet-400 bg-violet-50/50 dark:border-violet-400/20 dark:bg-violet-500/5",
           )}
         >
           <div
@@ -195,7 +198,7 @@ export function ChatComposer({
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
               onPaste={handlePaste}
-              placeholder="Message chatgpt2api…"
+              placeholder="Message BecomeAI…"
               rows={1}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -206,54 +209,92 @@ export function ChatComposer({
               className="max-h-40 min-h-[56px] resize-none rounded-[24px] border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-6 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 dark:text-stone-100 dark:placeholder:text-stone-500 sm:min-h-[64px] sm:px-6 sm:pt-5 sm:pb-3 sm:text-base"
             />
             {isDragging ? (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-900 bg-white/85 text-sm font-medium text-stone-900 backdrop-blur-[1px] sm:rounded-[32px]">
-                <div className="flex items-center gap-2 rounded-full bg-stone-950 px-4 py-2 text-white shadow-lg">
+              <div              className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-400 bg-white/85 text-sm font-medium text-stone-700 backdrop-blur-[1px] sm:rounded-[32px]">
+                <div className="flex items-center gap-2 rounded-full bg-stone-900 px-4 py-2 text-white shadow-lg dark:bg-stone-200 dark:text-stone-900">
                   <ImagePlus className="size-4" />
-                  <span>Release to attach image</span>
+                  <span>Drop image to attach</span>
                 </div>
               </div>
             ) : null}
 
+            {/* Bottom toolbar */}
             <div className="flex items-end justify-between gap-2 rounded-b-[24px] border-t border-stone-100/80 bg-white/80 px-3 pt-2 pb-3 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3" onClick={(event) => event.stopPropagation()}>
               <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
-                {/* Image attach button */}
+
+                {/* Image attach */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-3 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900 sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-3 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach image"
                 >
                   <ImagePlus className="size-3.5" />
                   <span className="hidden sm:inline">Image</span>
                 </button>
 
-                {/* Tool pills */}
-                {TOOL_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => onToolChange(option.value)}
-                    className={cn(
-                      "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:px-3.5",
-                      tool === option.value
-                        ? "bg-stone-900 text-white shadow-sm dark:bg-white dark:text-stone-900"
-                        : "border border-stone-200/60 bg-white/50 text-stone-500 hover:bg-stone-50 hover:text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white",
-                    )}
-                  >
-                    <span className="text-xs">{option.icon}</span>
-                    <span className="hidden sm:inline">{option.label}</span>
-                  </button>
-                ))}
+                {/* Tool selector — PROPER DROPDOWN */}
+                <Popover open={toolOpen} onOpenChange={setToolOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:px-3.5",
+                        tool === "auto"
+                          ? "border border-stone-200/60 bg-white/50 text-stone-500 hover:bg-stone-50 hover:text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                          : "bg-stone-900 text-white shadow-sm dark:bg-white dark:text-stone-900",
+                      )}
+                    >
+                      <selectedTool.icon className="size-3.5" />
+                      <span className="hidden sm:inline">{selectedTool.label}</span>
+                      <svg className="size-3 opacity-50" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 5l3 3 3-3" />
+                      </svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" sideOffset={8} className="w-64 p-1.5 rounded-2xl glass-card z-[120]">
+                    {TOOL_OPTIONS.map((option) => {
+                      const OptionIcon = option.icon;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            onToolChange(option.value);
+                            setToolOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-all duration-150",
+                            tool === option.value
+                              ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900"
+                              : "text-stone-600 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white",
+                          )}
+                        >
+                          <OptionIcon className="size-4 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{option.label}</div>
+                            <div className={cn(
+                              "text-[10px] font-normal",
+                              tool === option.value ? "opacity-70" : "text-stone-400 dark:text-stone-500",
+                            )}>
+                              {option.desc}
+                            </div>
+                          </div>
+                          {tool === option.value && <Check className="size-3.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
 
                 {/* Model selector */}
                 <div className="relative shrink-0">
                   <Select value={model} onValueChange={onModelChange}>
                     <SelectTrigger
-                      className="h-8 max-w-[140px] rounded-full border-stone-200/60 bg-white/50 text-xs font-medium text-stone-600 shadow-none backdrop-blur-sm sm:h-9 sm:max-w-[180px]"
+                      className="h-8 max-w-[160px] rounded-full border-stone-200/60 bg-white/50 text-xs font-medium text-stone-600 shadow-none backdrop-blur-sm sm:h-9 sm:max-w-[200px]"
                       aria-label="Model"
                     >
                       <div className="flex min-w-0 items-center gap-1.5">
-                        <img src="/openai.svg" alt="" aria-hidden="true" className="size-3.5 shrink-0 opacity-60" />
+                        <Wand2 className="size-3.5 shrink-0 text-stone-500 dark:text-stone-400" />
                         <span className="truncate">{selectedModelLabel}</span>
                       </div>
                     </SelectTrigger>
@@ -320,7 +361,7 @@ export function ChatComposer({
                       aria-label="Reasoning effort"
                     >
                       <span className="truncate">
-                        {reasoningEffort ? `${reasoningEffort}` : "Auto"}
+                        {reasoningEffort ? `${reasoningEffort}` : "Reasoning"}
                       </span>
                     </SelectTrigger>
                     <SelectContent className="z-[120]">
@@ -338,7 +379,7 @@ export function ChatComposer({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-stone-100 hover:scale-105 dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-white/20 sm:size-10"
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
                   aria-label="Stop generating"
                 >
                   <Square className="size-3.5 fill-current sm:size-4" />
@@ -348,7 +389,7 @@ export function ChatComposer({
                   type="button"
                   onClick={() => void onSubmit()}
                   disabled={!input.trim() && images.length === 0}
-                  className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-md transition-all duration-200 hover:bg-stone-800 hover:shadow-lg hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:hover:scale-100 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200 sm:size-10"
+                  className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none disabled:hover:scale-100 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-700 dark:disabled:text-stone-400 sm:size-10"
                   aria-label="Send message"
                 >
                   <ArrowUp className="size-3.5 sm:size-4" />
@@ -358,7 +399,7 @@ export function ChatComposer({
           </div>
         </div>
         <p className="mt-2 px-2 text-center text-[11px] text-stone-400 dark:text-stone-500 sm:text-xs">
-          ChatGPT can make mistakes. Check important info.
+          BecomeAI can make mistakes. Check important info.
         </p>
       </div>
     </div>

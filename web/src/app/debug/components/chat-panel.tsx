@@ -72,7 +72,7 @@ function messageImages(message: ChatMessage): string[] {
 export function ChatPanel() {
   const [model, setModel] = useState("auto");
   const [reasoningEffort, setReasoningEffort] = useState("");
-  const [input, setInput] = useState("Hello, note that my project is called chatgpt2api.");
+  const [input, setInput] = useState("Hello, note that my project is called BecomeAI.");
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [raw, setRaw] = useState<ChatCompletionResponse | null>(null);

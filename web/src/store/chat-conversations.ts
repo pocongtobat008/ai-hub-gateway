@@ -1,7 +1,5 @@
 "use client";
 
-import localforage from "localforage";
-
 export type ChatContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -24,13 +22,32 @@ export type ChatConversation = {
   messages: ChatMessage[];
 };
 
-const chatConversationStorage = localforage.createInstance({
-  name: "chatgpt2api",
-  storeName: "chat_conversations",
-});
+// ── API helpers ──────────────────────────────────────────────────────────────
 
-const CHAT_CONVERSATIONS_KEY = "items";
-let chatConversationWriteQueue: Promise<void> = Promise.resolve();
+function apiBase(): string {
+  try {
+    return (window as any).__BECOMEAI_API_URL__ || window.location.origin;
+  } catch {
+    return "";
+  }
+}
+
+async function apiFetch(path: string, init?: RequestInit): Promise<any> {
+  const url = `${apiBase()}${path}`;
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`API ${res.status}: ${await res.text().catch(() => "error")}`);
+  }
+  return res.json();
+}
+
+// ── normalize ────────────────────────────────────────────────────────────────
 
 function normalizeMessage(message: ChatMessage): ChatMessage {
   let content: string | ChatContentPart[] = message.content;
@@ -74,70 +91,46 @@ function normalizeConversation(raw: ChatConversation): ChatConversation {
   };
 }
 
-function sortChatConversations(conversations: ChatConversation[]): ChatConversation[] {
-  return [...conversations].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-}
-
-function queueChatConversationWrite<T>(operation: () => Promise<T>): Promise<T> {
-  const result = chatConversationWriteQueue.then(operation);
-  chatConversationWriteQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
-}
-
-async function readStoredChatConversations(): Promise<ChatConversation[]> {
-  const items =
-    (await chatConversationStorage.getItem<ChatConversation[]>(CHAT_CONVERSATIONS_KEY)) || [];
-  return items.map(normalizeConversation);
-}
+// ── public API ───────────────────────────────────────────────────────────────
 
 export async function listChatConversations(): Promise<ChatConversation[]> {
-  return sortChatConversations(await readStoredChatConversations());
+  try {
+    const data = await apiFetch("/api/conversations");
+    return (data.items || []).map(normalizeConversation);
+  } catch {
+    // Fallback to empty if backend unavailable
+    return [];
+  }
 }
 
 export async function saveChatConversation(conversation: ChatConversation): Promise<void> {
-  await queueChatConversationWrite(async () => {
-    const items = await readStoredChatConversations();
-    const nextConversation = normalizeConversation(conversation);
-    const nextItems = sortChatConversations([
-      nextConversation,
-      ...items.filter((item) => item.id !== nextConversation.id),
-    ]);
-    await chatConversationStorage.setItem(CHAT_CONVERSATIONS_KEY, nextItems);
+  const normalized = normalizeConversation(conversation);
+  await apiFetch("/api/conversations", {
+    method: "POST",
+    body: JSON.stringify({ conversation: normalized }),
   });
 }
 
 export async function renameChatConversation(id: string, title: string): Promise<void> {
-  await queueChatConversationWrite(async () => {
-    const items = await readStoredChatConversations();
-    const target = items.find((item) => item.id === id);
-    if (!target) return;
-    const updated = { ...target, title, updatedAt: new Date().toISOString() };
-    const nextItems = sortChatConversations([
-      updated,
-      ...items.filter((item) => item.id !== id),
-    ]);
-    await chatConversationStorage.setItem(CHAT_CONVERSATIONS_KEY, nextItems);
+  await apiFetch(`/api/conversations/${encodeURIComponent(id)}/rename`, {
+    method: "PUT",
+    body: JSON.stringify({ title }),
   });
 }
 
 export async function deleteChatConversation(id: string): Promise<void> {
-  await queueChatConversationWrite(async () => {
-    const items = await readStoredChatConversations();
-    await chatConversationStorage.setItem(
-      CHAT_CONVERSATIONS_KEY,
-      items.filter((item) => item.id !== id),
-    );
+  await apiFetch(`/api/conversations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
 
 export async function clearChatConversations(): Promise<void> {
-  await queueChatConversationWrite(async () => {
-    await chatConversationStorage.removeItem(CHAT_CONVERSATIONS_KEY);
+  await apiFetch("/api/conversations", {
+    method: "DELETE",
   });
 }
+
+// ── message utilities ────────────────────────────────────────────────────────
 
 export function messageText(message: ChatMessage): string {
   if (typeof message.content === "string") {

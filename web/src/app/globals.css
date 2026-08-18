@@ -271,14 +271,14 @@
 /* ── Brand gradient text ──────────────────────────────────────────── */
 
 .brand-text {
-  background: linear-gradient(135deg, #171717 0%, #525252 50%, #171717 100%);
+  background: linear-gradient(135deg, #171717 0%, #404040 50%, #171717 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .dark .brand-text {
-  background: linear-gradient(135deg, #fafafa 0%, #a8a29e 50%, #fafafa 100%);
+  background: linear-gradient(135deg, #f5f5f5 0%, #d4d4d4 50%, #f5f5f5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -358,13 +358,13 @@
 }
 
 .tool-badge-active {
-  background: #171717;
+  background: #292524;
   color: white;
 }
 
 .dark .tool-badge-active {
-  background: #fafafa;
-  color: #171717;
+  background: #e7e5e4;
+  color: #1c1917;
 }
 
 .tool-badge-inactive {
@@ -388,18 +388,18 @@
 /* ── Input area modern ────────────────────────────────────────────── */
 
 .chat-input-wrapper {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .chat-input-wrapper {
   background: rgba(41, 37, 36, 0.4);
   border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
 }
 
 .chat-input-wrapper:focus-within {

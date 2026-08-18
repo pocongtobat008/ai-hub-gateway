@@ -58,7 +58,7 @@ function MarkdownResult({ content }: { content: string }) {
 }
 
 export function SearchPanel() {
-  const [prompt, setPrompt] = useState("Search for chatgpt2api projects");
+  const [prompt, setPrompt] = useState("Search for BecomeAI projects");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

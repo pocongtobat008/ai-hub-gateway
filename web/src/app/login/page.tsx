@@ -68,11 +68,13 @@ export default function LoginPage() {
       <Card className="glass-card relative z-10 w-full max-w-[440px] rounded-3xl border-white/40 shadow-[0_32px_100px_rgba(0,0,0,0.08)] animate-fade-in-scale dark:border-white/5 dark:shadow-[0_32px_100px_rgba(0,0,0,0.3)]">
         <CardContent className="space-y-7 p-8 sm:p-10">
           <div className="space-y-5 text-center">
-            <div className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-900 to-stone-700 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl dark:from-white dark:to-stone-300 dark:text-stone-900">
+            <div className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl dark:from-stone-200 dark:to-stone-400 dark:text-stone-950">
               <Sparkles className="size-7" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight brand-text">Welcome back</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                <span className="brand-text">Welcome to BecomeAI</span>
+              </h1>
               <p className="text-sm leading-6 text-stone-500 dark:text-stone-400">
                 Enter your key to access chat, image generation, and more.
               </p>
@@ -99,7 +101,7 @@ export default function LoginPage() {
           </div>
 
           <Button
-            className="h-12 w-full rounded-xl bg-stone-900 text-sm font-medium text-white shadow-md transition-all duration-200 hover:bg-stone-800 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
+            className="h-12 w-full rounded-xl bg-stone-900 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white"
             onClick={() => void handleLogin()}
             disabled={isSubmitting}
           >
@@ -108,7 +110,7 @@ export default function LoginPage() {
           </Button>
 
           <p className="text-center text-[11px] text-stone-400 dark:text-stone-500">
-            Powered by chatgpt2api
+            Powered by BecomeAI
           </p>
         </CardContent>
       </Card>
