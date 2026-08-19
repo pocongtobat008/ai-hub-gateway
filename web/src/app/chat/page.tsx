@@ -723,38 +723,37 @@ function ChatPageContent() {
 
   return (
     <>
-      <section className="mx-auto grid h-[calc(100dvh-1rem)] min-h-0 w-full overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-3rem)] sm:pb-6">
+      <section className="mx-auto grid h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-0.5rem)] min-h-0 w-full overflow-hidden px-0 sm:h-[calc(100dvh-3rem)] sm:pb-6">
         <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 px-1 lg:hidden">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 shrink-0 rounded-xl border-stone-200 bg-white/90 px-2 text-stone-600 shadow-sm"
+          <div className="flex items-center gap-2 px-1 py-1 lg:hidden">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white/90 text-stone-600 shadow-sm transition-all active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
               onClick={() => (window as any).__sidebarOpenMobile?.()}
               aria-label="Open menu"
             >
-              <Menu className="size-4" />
-            </Button>
+              <Menu className="size-5" />
+            </button>
             <div className="flex-1 truncate text-sm font-semibold text-stone-800 dark:text-stone-200">
               {selectedConversation?.title || 'New chat'}
             </div>
-            <Button
-              className="h-9 shrink-0 rounded-xl bg-stone-900 px-3 text-white shadow-sm"
+            <button
+              type="button"
+              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-stone-900 px-3 text-sm font-medium text-white shadow-sm transition-all active:scale-95 dark:bg-stone-100 dark:text-stone-900"
               onClick={handleCreateDraft}
             >
-              <Plus className="size-3.5" />
+              <Plus className="size-4" />
               <span className="hidden sm:inline">New</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 shrink-0 rounded-xl border-stone-200 bg-white/85 px-2 text-stone-500 shadow-sm"
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white/85 text-stone-500 shadow-sm transition-all active:scale-95 disabled:opacity-40 dark:border-white/10 dark:bg-white/5"
               onClick={() => setDeleteConfirm({ id: "__all__" })}
               disabled={conversations.length === 0}
               aria-label="Clear all chats"
             >
-              <Trash2 className="size-3.5" />
-            </Button>
+              <Trash2 className="size-4" />
+            </button>
           </div>
 
           <div className="relative min-h-0 flex-1">

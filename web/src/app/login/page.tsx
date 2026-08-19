@@ -56,7 +56,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative grid min-h-[calc(100vh-1rem)] w-full place-items-center px-4 py-6">
+    <div className="relative grid min-h-[100dvh] w-full place-items-center px-4 py-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
       <HeaderActions className="fixed top-4 right-4 z-10" />
 
       {/* Background decoration */}
@@ -66,7 +66,7 @@ export default function LoginPage() {
       </div>
 
       <Card className="glass-card relative z-10 w-full max-w-[440px] rounded-3xl border-white/40 shadow-[0_32px_100px_rgba(0,0,0,0.08)] animate-fade-in-scale dark:border-white/5 dark:shadow-[0_32px_100px_rgba(0,0,0,0.3)]">
-        <CardContent className="space-y-7 p-8 sm:p-10">
+        <CardContent className="space-y-6 p-6 sm:space-y-7 sm:p-10">
           <div className="space-y-5 text-center">
             <div className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl dark:from-stone-200 dark:to-stone-400 dark:text-stone-950">
               <Sparkles className="size-7" />

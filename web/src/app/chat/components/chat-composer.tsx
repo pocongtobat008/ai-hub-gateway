@@ -144,7 +144,7 @@ export function ChatComposer({
   };
 
   return (
-    <div className="shrink-0 flex justify-center px-1 pb-2 sm:px-0 sm:pb-0">
+    <div className="shrink-0 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] sm:px-0 sm:pb-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}>
       <div style={{ width: "min(980px, 100%)" }}>
         <input
           ref={fileInputRef}
@@ -219,14 +219,14 @@ export function ChatComposer({
             ) : null}
 
             {/* Bottom toolbar */}
-            <div className="flex items-end justify-between gap-2 rounded-b-[24px] border-t border-stone-100/80 bg-white/80 px-3 pt-2 pb-3 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3" onClick={(event) => event.stopPropagation()}>
-              <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
+            <div className="flex items-end justify-between gap-1.5 rounded-b-[20px] border-t border-stone-100/80 bg-white/80 px-2 pt-2 pb-2.5 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3 sm:gap-2" onClick={(event) => event.stopPropagation()}>
+              <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
 
                 {/* Image attach */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-3 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach image"
                 >
                   <ImagePlus className="size-3.5" />
@@ -252,7 +252,7 @@ export function ChatComposer({
                       </svg>
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" sideOffset={8} className="w-64 p-1.5 rounded-2xl bg-white border border-stone-200 shadow-xl z-[120] dark:bg-stone-900 dark:border-white/10 dark:shadow-2xl">
+                  <PopoverContent align="start" sideOffset={8} className="w-64 p-1.5 rounded-2xl bg-white border border-stone-200 shadow-xl z-[120] dark:bg-stone-900 dark:border-white/10 dark:shadow-2xl max-h-[60vh] overflow-y-auto sm:max-h-none">
                     {TOOL_OPTIONS.map((option) => {
                       const OptionIcon = option.icon;
                       return (
@@ -376,10 +376,11 @@ export function ChatComposer({
                 </div>
               </div>
 
-              {isStreaming ? (                    <button
-                      type="button"
-                      onClick={onStop}
-                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 animate-pulse-soft dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 animate-pulse-soft min-h-[36px] min-w-[36px] dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
                   aria-label="Stop generating"
                 >
                   <Square className="size-3.5 fill-current sm:size-4" />
@@ -389,7 +390,7 @@ export function ChatComposer({
                   type="button"
                   onClick={() => void onSubmit()}
                   disabled={!input.trim() && images.length === 0}
-                  className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none disabled:hover:scale-100 dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-700 dark:disabled:text-stone-400 sm:size-10"
+                  className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none disabled:hover:scale-100 min-h-[36px] min-w-[36px] dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-700 dark:disabled:text-stone-400 sm:size-10"
                   aria-label="Send message"
                 >
                   <ArrowUp className="size-3.5 sm:size-4" />

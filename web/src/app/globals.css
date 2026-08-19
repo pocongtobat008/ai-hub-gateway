@@ -693,7 +693,7 @@
     width: calc(100vw - 24px) !important;
     max-width: none !important;
     margin: 0 !important;
-    border-radius: 16px !important;
+    border-radius: 20px !important;
   }
 
   .chat-input-wrapper {
@@ -702,6 +702,13 @@
 
   [role="tablist"] {
     gap: 4px !important;
+  }
+
+  /* Mobile: prevent body scroll when sidebar is open */
+  body.sidebar-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
   }
 }
 
@@ -713,8 +720,14 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
   }
 
-  button, a, [role="button"] {
-    min-height: 32px;
+  button, a, [role="button"], input, textarea, select {
+    min-height: 44px;
+  }
+
+  /* Better tap targets for sidebar nav */
+  nav a, nav button {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
@@ -784,6 +797,7 @@
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 
   /* Full-screen chat on mobile */
@@ -796,27 +810,41 @@
   /* Mobile dialog fullscreen */
   [data-slot="dialog-content"],
   [data-radix-dialog-content] {
-    width: calc(100vw - 16px) !important;
+    width: calc(100vw - 24px) !important;
     max-width: none !important;
-    max-height: 90vh !important;
+    max-height: 85vh !important;
     border-radius: 20px !important;
     margin: auto !important;
   }
 
   /* Mobile select dropdown */
   [data-radix-select-content] {
-    max-height: 50vh !important;
+    max-height: 45vh !important;
   }
 
   /* Mobile tabs horizontal scroll */
   [role="tablist"] {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none;
+  }
+  [role="tablist"]::-webkit-scrollbar {
+    display: none;
   }
 
   /* Mobile popover solid bg */
   [data-radix-popper-content-wrapper] {
     max-width: calc(100vw - 32px) !important;
+  }
+
+  /* Prevent text zoom on iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Better bottom toolbar spacing */
+  .chat-input-wrapper .flex.items-end {
+    padding: 8px 10px !important;
   }
 }
 
@@ -852,13 +880,13 @@
 /* ── Touch-friendly mobile buttons ─────────────────────────────────────────── */
 @media (max-width: 768px) {
   button, a[role="link"], [role="button"] {
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   /* Compact mobile toolbar */
   .chat-input-wrapper .flex.items-end {
-    padding: 8px 12px !important;
+    padding: 6px 10px !important;
   }
 }
 

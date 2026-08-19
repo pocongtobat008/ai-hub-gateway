@@ -89,7 +89,7 @@ function SidebarLink({
     <Link
       href={item.href}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition-all duration-200 hover-lift",
+        "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-[13px] font-medium transition-all duration-200 hover-lift min-h-[40px]",
         collapsed && "justify-center px-0",
         active
           ? "bg-stone-900 text-white shadow-sm dark:bg-stone-100 dark:text-stone-900"
@@ -446,10 +446,10 @@ export function AppSidebar({
       {/* Mobile sidebar overlay */}
       <aside
         className={cn(
-          "lg:hidden fixed inset-y-0 left-0 z-40 flex flex-col border-r border-stone-200/60 bg-stone-50/95 backdrop-blur-xl transition-all duration-300 ease-out dark:border-white/5 dark:bg-stone-950/95",
+          "lg:hidden fixed inset-y-0 left-0 z-40 flex flex-col border-r border-stone-200/60 bg-stone-50 dark:bg-stone-950 transition-all duration-300 ease-out dark:border-white/5 shadow-2xl",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
-        style={{ width: 260 }}
+        style={{ width: 280, paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {sidebarContent}
       </aside>

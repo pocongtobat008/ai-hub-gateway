@@ -131,8 +131,9 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
         {/* Mobile backdrop */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity lg:hidden"
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden"
             onClick={() => setMobileOpen(false)}
+            onTouchMove={(e) => e.preventDefault()}
           />
         )}
 
@@ -155,7 +156,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
           className="flex-1 min-w-0 transition-all duration-300"
           style={{ marginLeft: sidebarWidth }}
         >
-          <div className="min-h-screen px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
+          <div className="min-h-screen px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
             <PageTransition>
               {children}
             </PageTransition>
