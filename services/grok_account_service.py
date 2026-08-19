@@ -1,8 +1,11 @@
-"""Grok account pool (SSO cookie) for the Grok web provider.
+"""Grok account pool for the Grok provider.
 
-Mirrors the DeepSeek/Gemini account-pool pattern: each account stores its
-Grok SSO cookie plus health/usage tracking, and the provider selects a
-healthy account per request with automatic round-robin failover.
+Supports two auth methods:
+1. xAI API Key (primary): from console.x.ai → api.x.ai/v1
+2. Browser Cookies (fallback): sso cookie from grok.com (needs cf_clearance)
+
+Each account stores either an API key or cookies, plus health/usage tracking.
+The provider selects a healthy account per request with round-robin failover.
 """
 
 from __future__ import annotations
@@ -38,7 +41,6 @@ def _normalize_status(value: object) -> str:
         "禁用": "disabled",
         "banned": "disabled",
         "rate_limit": "rate_limited",
-        "ratelimited": "rate_limited",
     }
     status = mapping.get(status, status)
     if status not in VALID_STATUSES:
@@ -46,15 +48,35 @@ def _normalize_status(value: object) -> str:
     return status
 
 
+def _normalize_cookies(value: object) -> dict[str, str]:
+    if isinstance(value, dict):
+        return {k: str(v or "").strip() for k, v in value.items() if str(v or "").strip()}
+    if isinstance(value, str):
+        cookies = {}
+        for part in value.split(";"):
+            part = part.strip()
+            if "=" in part:
+                key, val = part.split("=", 1)
+                key = key.strip()
+                val = val.strip()
+                if key and val:
+                    cookies[key] = val
+        return cookies
+    return {}
+
+
 def _normalize_account(item: object) -> dict | None:
     if not isinstance(item, dict):
         return None
-    sso = str(item.get("sso") or item.get("cookie") or "").strip()
-    if not sso:
+    api_key = str(item.get("api_key") or "").strip()
+    cookies = _normalize_cookies(item.get("cookies") or item.get("sso"))
+    # Must have either api_key or sso cookie
+    if not api_key and not cookies.get("sso"):
         return None
     return {
         "id": str(item.get("id") or _new_id()).strip(),
-        "sso": sso,
+        "api_key": api_key,
+        "cookies": cookies,
         "label": str(item.get("label") or "").strip(),
         "proxy": str(item.get("proxy") or "").strip(),
         "status": _normalize_status(item.get("status")),
@@ -65,18 +87,31 @@ def _normalize_account(item: object) -> dict | None:
         "last_invalid_at": item.get("last_invalid_at") or None,
         "last_error": str(item.get("last_error") or "").strip() or None,
         "restore_at": item.get("restore_at") or None,
-        "models": item.get("models") if isinstance(item.get("models"), list) else [],
         "created_at": str(item.get("created_at") or _now_iso()),
         "updated_at": str(item.get("updated_at") or _now_iso()),
     }
 
 
 def _public_account(item: dict) -> dict:
-    """Account shape safe to send to the frontend (masks the SSO cookie)."""
+    """Account shape safe to send to the frontend (masks sensitive data)."""
     public = dict(item)
-    sso = str(public.get("sso") or "")
-    if len(sso) > 12:
-        public["sso"] = sso[:8] + "…" + sso[-4:]
+    # Mask API key
+    api_key = str(public.get("api_key") or "")
+    if len(api_key) > 12:
+        public["api_key_masked"] = api_key[:8] + "…" + api_key[-4:]
+    else:
+        public["api_key_masked"] = "••••" if api_key else ""
+    public.pop("api_key", None)  # Don't expose full key
+    # Mask cookies
+    cookies = dict(public.get("cookies") or {})
+    masked = {}
+    for k, v in cookies.items():
+        if len(v) > 12:
+            masked[k] = v[:8] + "…" + v[-4:]
+        else:
+            masked[k] = "••••"
+    public["cookies"] = masked
+    public["cookie_count"] = len(cookies)
     return public
 
 
@@ -129,24 +164,34 @@ class GrokAccountService:
         return None
 
     def get_credentials(self, account_id: str) -> dict | None:
-        """Return raw credentials (SSO cookie) for the provider."""
+        """Return raw credentials (api_key or cookies) for the provider."""
         with self._lock:
             for item in self._accounts:
                 if item["id"] == account_id:
                     return {
                         "id": item["id"],
-                        "sso": item["sso"],
+                        "api_key": item.get("api_key") or "",
+                        "cookies": dict(item.get("cookies") or {}),
                         "proxy": item.get("proxy") or "",
                     }
         return None
 
-    def add_account(self, sso: str, *, label: str = "", proxy: str = "") -> dict:
-        sso = sso.strip()
-        if not sso:
-            raise ValueError("SSO cookie is required")
+    def add_account(
+        self,
+        *,
+        api_key: str = "",
+        cookies: dict[str, str] | str | None = None,
+        label: str = "",
+        proxy: str = "",
+    ) -> dict:
+        api_key = api_key.strip()
+        normalized_cookies = _normalize_cookies(cookies) if cookies else {}
+        if not api_key and not normalized_cookies.get("sso"):
+            raise ValueError("Either 'api_key' or 'sso' cookie is required")
         account = _normalize_account({
             "id": _new_id(),
-            "sso": sso,
+            "api_key": api_key,
+            "cookies": normalized_cookies,
             "label": label,
             "proxy": proxy,
             "status": "normal",
@@ -166,10 +211,12 @@ class GrokAccountService:
                 if item["id"] != account_id:
                     continue
                 merged = {**item, **updates, "id": account_id, "updated_at": _now_iso()}
-                # An empty sso means "keep the current one"
-                sso = str(merged.get("sso") or "").strip()
-                if not sso:
-                    merged["sso"] = item.get("sso") or ""
+                if "cookies" in updates:
+                    new_cookies = _normalize_cookies(updates["cookies"])
+                    if new_cookies:
+                        merged["cookies"] = new_cookies
+                    else:
+                        merged["cookies"] = item.get("cookies") or {}
                 normalized = _normalize_account(merged)
                 if normalized is None:
                     return None
@@ -225,7 +272,6 @@ class GrokAccountService:
                 for item in usable:
                     if item["id"] == prefer_id:
                         return _public_account(item)
-            # Round-robin: pick next healthy account
             candidates = sorted(usable, key=lambda item: (item["success"] + item["fail"]))
             index = self._rr_index % len(candidates)
             self._rr_index = (self._rr_index + 1) % len(candidates)
@@ -247,18 +293,13 @@ class GrokAccountService:
                     item["last_invalid_at"] = _now_iso()
                     item["invalid_count"] = max(0, int(item.get("invalid_count") or 0)) + 1
                     lower = str(error or "").lower()
-                    if any(tok in lower for tok in ("401", "unauthorized", "invalid", "expired", "sso")):
+                    if any(tok in lower for tok in ("401", "expired", "invalid", "auth")):
                         item["status"] = "abnormal"
                         item["restore_at"] = None
-                    elif any(tok in lower for tok in ("rate limit", "429", "too many", "muted", "banned")):
+                    elif any(tok in lower for tok in ("rate limit", "429", "too many")):
                         item["status"] = "rate_limited"
                         item["restore_at"] = (
                             datetime.now(timezone.utc) + timedelta(minutes=10)
-                        ).isoformat(timespec="seconds")
-                    elif any(tok in lower for tok in ("timeout", "timed out", "500", "502", "503")):
-                        item["status"] = "rate_limited"
-                        item["restore_at"] = (
-                            datetime.now(timezone.utc) + timedelta(minutes=2)
                         ).isoformat(timespec="seconds")
                 self._save()
                 return

@@ -11,20 +11,23 @@ from services.grok_provider import grok_provider
 
 
 class AddAccountRequest(BaseModel):
-    sso: str
+    api_key: str = ""
+    cookies: dict[str, str] | str | None = None
     label: str = ""
     proxy: str = ""
 
 
 class UpdateAccountRequest(BaseModel):
-    sso: str | None = None
+    api_key: str | None = None
+    cookies: dict[str, str] | str | None = None
     label: str | None = None
     proxy: str | None = None
     status: str | None = None
 
 
 class TestAccountRequest(BaseModel):
-    sso: str
+    api_key: str = ""
+    cookies: dict[str, str] | str | None = None
     proxy: str = ""
 
 
@@ -46,7 +49,7 @@ def create_router() -> APIRouter:
         require_admin(authorization)
         try:
             account = grok_account_service.add_account(
-                sso=body.sso, label=body.label, proxy=body.proxy
+                api_key=body.api_key, cookies=body.cookies, label=body.label, proxy=body.proxy
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
@@ -72,7 +75,11 @@ def create_router() -> APIRouter:
     @router.post("/api/grok/test")
     async def test_account(body: TestAccountRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)
-        result = grok_provider.test_account(sso=body.sso, proxy=body.proxy)
+        from services.grok_account_service import _normalize_cookies
+        cookies = _normalize_cookies(body.cookies) if body.cookies else None
+        result = grok_provider.test_account(
+            api_key=body.api_key, cookies=cookies, proxy=body.proxy
+        )
         return {"result": result}
 
     return router
