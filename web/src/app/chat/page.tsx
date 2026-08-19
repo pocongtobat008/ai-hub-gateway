@@ -779,20 +779,20 @@ function ChatPageContent() {
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg dark:from-stone-200 dark:to-stone-400 dark:text-stone-950">
+                  <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg dark:from-stone-200 dark:to-stone-400 dark:text-stone-950 animate-float">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-6">
                       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                     </svg>
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+                    <h2 className="text-base font-semibold tracking-tight text-stone-900 sm:text-lg dark:text-stone-100">
                       Start a new chat
                     </h2>
-                    <p className="text-sm leading-6 text-stone-500">
+                    <p className="text-xs leading-5 text-stone-500 sm:text-sm sm:leading-6">
                       Ask anything — text, code, images. Responses stream in real time.
                     </p>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                     {["Write a short story", "Explain a concept simply", "Help me debug code"].map((suggestion) => (
                       <button
                         key={suggestion}
@@ -800,7 +800,7 @@ function ChatPageContent() {
                         onClick={() => {
                           setInput(suggestion);
                         }}
-                        className="cursor-pointer rounded-full border border-stone-200 bg-white/90 px-3.5 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:bg-white hover:text-stone-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-stone-300 dark:hover:bg-white/[0.08]"
+                        className="cursor-pointer rounded-full border border-stone-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-stone-600 transition hover:border-stone-300 hover:bg-white hover:text-stone-900 active:scale-95 sm:px-3.5 sm:text-xs dark:border-white/10 dark:bg-white/[0.04] dark:text-stone-300 dark:hover:bg-white/[0.08]"
                       >
                         {suggestion}
                       </button>

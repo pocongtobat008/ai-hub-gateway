@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
+  Search,
   Shield,
   Sparkles,
   Trash2,
@@ -107,6 +108,91 @@ function SidebarLink({
   );
 }
 
+function HistorySearch({
+  conversations,
+  onSelect,
+  formatTime,
+}: {
+  conversations: ChatConversation[];
+  onSelect: (id: string) => void;
+  formatTime: (v: string) => string;
+}) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = query.trim()
+    ? conversations.filter((c) =>
+        c.title.toLowerCase().includes(query.toLowerCase()) ||
+        c.messages.some((m) => {
+          const content = typeof m.content === "string" ? m.content : "";
+          return content.toLowerCase().includes(query.toLowerCase());
+        })
+      )
+    : [];
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-1.5 rounded-lg border border-stone-200/60 bg-white/50 px-2 py-1.5 transition-all focus-within:border-stone-300 focus-within:bg-white dark:border-white/8 dark:bg-white/5 dark:focus-within:border-white/20">
+        <Search className="size-3.5 shrink-0 text-stone-400 dark:text-stone-500" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(e.target.value.length > 0);
+          }}
+          onFocus={() => { if (query.length > 0) setIsOpen(true); }}
+          onBlur={() => { setTimeout(() => setIsOpen(false), 200); }}
+          placeholder="Search chats..."
+          className="flex-1 bg-transparent text-[12px] text-stone-700 outline-none placeholder:text-stone-400 dark:text-stone-300 dark:placeholder:text-stone-500"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); setIsOpen(false); inputRef.current?.focus(); }}
+            className="inline-flex size-4 items-center justify-center rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+          >
+            <span className="text-[10px]">✕</span>
+          </button>
+        )}
+      </div>
+      {isOpen && filtered.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[40vh] overflow-y-auto rounded-xl border border-stone-200 bg-white p-1 shadow-xl dark:border-white/10 dark:bg-stone-900 dark:shadow-2xl sm:max-h-[30vh]">
+          {filtered.slice(0, 20).map((conv) => (
+            <button
+              key={conv.id}
+              type="button"
+              onClick={() => {
+                onSelect(conv.id);
+                setQuery("");
+                setIsOpen(false);
+              }}
+              className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-stone-100 dark:hover:bg-white/10 min-h-[40px]"
+            >
+              <MessageSquare className="mt-0.5 size-3.5 shrink-0 text-stone-400 dark:text-stone-500" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12px] font-medium text-stone-700 dark:text-stone-300">
+                  {conv.title}
+                </div>
+                <div className="mt-0.5 text-[10px] text-stone-400 dark:text-stone-500">
+                  {conv.messages.length} msg · {formatTime(conv.updatedAt)}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {isOpen && query.length > 0 && filtered.length === 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-stone-200 bg-white p-3 text-center shadow-xl dark:border-white/10 dark:bg-stone-900">
+          <div className="text-[11px] text-stone-400 dark:text-stone-500">No results found</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConversationItem({
   conversation,
   selected,
@@ -128,7 +214,10 @@ function ConversationItem({
 }) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.title);
+  const [swipeX, setSwipeX] = useState(0);
+  const [showActions, setShowActions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const touchStartRef = useRef({ x: 0, y: 0, swiping: false });
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -137,20 +226,47 @@ function ConversationItem({
     }
   }, [editing]);
 
+  // Swipe-to-delete gesture
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, swiping: false };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    // Only swipe left, and only if horizontal movement > vertical
+    if (dx < 0 && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+      touchStartRef.current.swiping = true;
+      setSwipeX(Math.max(dx, -80));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartRef.current.swiping) {
+      if (swipeX < -50) {
+        setShowActions(true);
+      }
+      setSwipeX(0);
+    }
+    touchStartRef.current.swiping = false;
+  };
+
   if (collapsed) {
     return (
       <button
         type="button"
         onClick={() => onSelect(conversation.id)}
         className={cn(
-          "flex size-8 items-center justify-center rounded-lg transition-all duration-200 btn-press",
+          "flex size-10 items-center justify-center rounded-lg transition-all duration-200 btn-press min-h-[40px] min-w-[40px]",
           selected
             ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
             : "text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-white/8 dark:hover:text-white",
         )}
         title={conversation.title}
       >
-        <MessageSquare className="size-3.5" />
+        <MessageSquare className="size-4" />
       </button>
     );
   }
@@ -158,58 +274,113 @@ function ConversationItem({
   return (
     <div
       className={cn(
-        "group relative rounded-lg px-2 py-1.5 transition-all duration-200 cursor-pointer animate-fade-in",
+        "group relative rounded-xl transition-all duration-200 cursor-pointer animate-fade-in overflow-hidden min-h-[48px]",
         selected
           ? "bg-stone-900/8 dark:bg-stone-100/8"
           : "hover:bg-stone-100/60 dark:hover:bg-white/5",
       )}
       style={{ animationDelay: `${(index || 0) * 30}ms` }}
     >
-      <button type="button" onClick={() => onSelect(conversation.id)} className="block w-full pr-8 text-left">
-        <div className="truncate text-[12px] font-medium text-stone-700 dark:text-stone-300">
-          {editing ? (
-            <input
-              ref={inputRef}
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={() => {
-                if (editTitle.trim()) onRename(conversation.id, editTitle.trim());
-                setEditing(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
+      <div
+        className="relative flex items-start gap-2 px-2.5 py-2.5 transition-transform duration-200"
+        style={{ transform: `translateX(${swipeX}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <button type="button" onClick={() => onSelect(conversation.id)} className="flex-1 min-w-0 text-left">
+          <div className="truncate text-[13px] font-medium text-stone-700 leading-tight dark:text-stone-300">
+            {editing ? (
+              <input
+                ref={inputRef}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={() => {
                   if (editTitle.trim()) onRename(conversation.id, editTitle.trim());
                   setEditing(false);
-                }
-                if (e.key === "Escape") setEditing(false);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full rounded border border-stone-300 bg-white px-1 py-0.5 text-[12px] outline-none focus:border-stone-400 dark:border-stone-600 dark:bg-stone-800"
-            />
-          ) : (
-            <span className="truncate">{conversation.title}</span>
-          )}
-        </div>
-        <div className="mt-0.5 text-[10px] text-stone-400 dark:text-stone-500">
-          {conversation.messages.length} msg · {formatTime(conversation.updatedAt)}
-        </div>
-      </button>
-      <div className="absolute top-1.5 right-1 flex items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 translate-x-1">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-          className="inline-flex size-5 items-center justify-center rounded text-stone-400 hover:text-stone-600 transition-all duration-150 hover:scale-110 dark:hover:text-stone-300"
-        >
-          <Pencil className="size-2.5" />
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (editTitle.trim()) onRename(conversation.id, editTitle.trim());
+                    setEditing(false);
+                  }
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-[13px] outline-none focus:border-stone-400 dark:border-stone-600 dark:bg-stone-800"
+              />
+            ) : (
+              <span className="truncate block">{conversation.title}</span>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-stone-400 dark:text-stone-500">
+            <span>{conversation.messages.length} msg</span>
+            <span className="opacity-30">·</span>
+            <span>{formatTime(conversation.updatedAt)}</span>
+          </div>
         </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete(conversation.id); }}
-          className="inline-flex size-5 items-center justify-center rounded text-stone-400 hover:text-rose-500 transition-all duration-150 hover:scale-110"
-        >
-          <Trash2 className="size-2.5" />
-        </button>
+
+        {/* Desktop: hover actions */}
+        <div className="hidden sm:flex items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:opacity-100 shrink-0 pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+            className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-all duration-150 hover:scale-105 dark:hover:bg-white/10 dark:hover:text-stone-300"
+          >
+            <Pencil className="size-3" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(conversation.id); }}
+            className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-rose-50 hover:text-rose-500 transition-all duration-150 hover:scale-105 dark:hover:bg-rose-500/10"
+          >
+            <Trash2 className="size-3" />
+          </button>
+        </div>
+
+        {/* Mobile: always-visible action button (tap to toggle) */}
+        <div className="sm:hidden shrink-0 pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActions(!showActions);
+            }}
+            className="inline-flex size-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 active:bg-stone-200 transition-all duration-150 min-h-[32px] min-w-[32px] dark:hover:bg-white/10"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+        </div>
       </div>
+
+      {/* Mobile: action bar (revealed on swipe or tap) */}
+      {showActions && (
+        <div className="sm:hidden flex items-center gap-1 px-2.5 pb-2 animate-slide-down">
+          <button
+            type="button"
+            onClick={() => { setEditing(true); setShowActions(false); }}
+            className="flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-[12px] font-medium text-stone-600 transition-all active:scale-95 dark:bg-white/10 dark:text-stone-300 min-h-[32px]"
+          >
+            <Pencil className="size-3" />
+            Rename
+          </button>
+          <button
+            type="button"
+            onClick={() => { onDelete(conversation.id); setShowActions(false); }}
+            className="flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-1.5 text-[12px] font-medium text-rose-600 transition-all active:scale-95 dark:bg-rose-500/10 dark:text-rose-400 min-h-[32px]"
+          >
+            <Trash2 className="size-3" />
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowActions(false)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-stone-400 transition-all active:scale-95 min-h-[32px]"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -337,7 +508,7 @@ export function AppSidebar({
       )}
 
       {/* Conversation History */}
-      <div className="flex-1 min-h-0 overflow-hidden px-3 pt-2">
+      <div className="flex-1 min-h-0 overflow-hidden px-3 pt-2 flex flex-col">
         {!collapsed && (
           <>
             <div className="mb-1.5 flex items-center justify-between px-1 animate-fade-in">
@@ -350,10 +521,25 @@ export function AppSidebar({
                 </span>
               )}
             </div>
-            <div className="space-y-0.5 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300/50 dark:[&::-webkit-scrollbar-thumb]:bg-stone-600/50" style={{ maxHeight: "calc(100vh - 400px)" }}>
+            {/* Search box for mobile */}
+            {conversations.length > 3 && (
+              <div className="mb-2 animate-fade-in">
+                <HistorySearch conversations={conversations} onSelect={(id) => {
+                  onSelectConversation?.(id);
+                  onMobileOpenChange(false);
+                }} formatTime={formatTime} />
+              </div>
+            )}
+            <div className="flex-1 min-h-0 space-y-0.5 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300/50 dark:[&::-webkit-scrollbar-thumb]:bg-stone-600/50">
               {conversations.length === 0 ? (
-                <div className="px-1 py-3 text-[11px] text-stone-400 dark:text-stone-500 animate-fade-in">
-                  No chats yet
+                <div className="px-1 py-6 text-center animate-fade-in">
+                  <MessageSquare className="mx-auto mb-2 size-6 text-stone-300 dark:text-stone-600" />
+                  <div className="text-[11px] text-stone-400 dark:text-stone-500">
+                    No chats yet
+                  </div>
+                  <div className="mt-1 text-[10px] text-stone-300 dark:text-stone-600">
+                    Start a conversation
+                  </div>
                 </div>
               ) : (
                 conversations.slice(0, 50).map((conv, i) => (
