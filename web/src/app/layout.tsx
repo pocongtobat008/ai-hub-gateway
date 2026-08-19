@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { ThemeScript } from "@/components/theme-script";
 import { SidebarShell } from "@/components/sidebar-shell";
+import { ConfettiProvider } from "@/components/confetti";
 
 export const metadata: Metadata = {
   title: "BecomeAI · Unified AI Gateway",
@@ -37,8 +38,10 @@ export default function RootLayout({
             '"Inter","SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif',
         }}
       >
-        <Toaster position="top-center" richColors offset={48} />
-        <SidebarShell>{children}</SidebarShell>
+        <ConfettiProvider>
+          <Toaster position="top-center" richColors offset={48} />
+          <SidebarShell>{children}</SidebarShell>
+        </ConfettiProvider>
       </body>
     </html>
   );

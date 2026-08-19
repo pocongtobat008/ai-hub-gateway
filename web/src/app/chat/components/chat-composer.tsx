@@ -143,7 +143,7 @@ export function ChatComposer({
   };
 
   return (
-    <div className="shrink-0 flex justify-center px-1 sm:px-0">
+    <div className="shrink-0 flex justify-center px-1 pb-2 sm:px-0 sm:pb-0">
       <div style={{ width: "min(980px, 100%)" }}>
         <input
           ref={fileInputRef}
@@ -225,7 +225,7 @@ export function ChatComposer({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-3 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-3 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach image"
                 >
                   <ImagePlus className="size-3.5" />
@@ -375,11 +375,10 @@ export function ChatComposer({
                 </div>
               </div>
 
-              {isStreaming ? (
-                <button
-                  type="button"
-                  onClick={onStop}
-                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
+              {isStreaming ? (                    <button
+                      type="button"
+                      onClick={onStop}
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 animate-pulse-soft dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
                   aria-label="Stop generating"
                 >
                   <Square className="size-3.5 fill-current sm:size-4" />

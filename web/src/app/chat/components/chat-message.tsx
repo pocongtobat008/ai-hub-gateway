@@ -113,7 +113,7 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) 
 
   if (message.role === "user") {
     return (
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 animate-message-appear">
         <div className="max-w-[85%] sm:max-w-[75%]">
           {images.length > 0 ? (
             <div className="mb-2 flex flex-wrap justify-end gap-2">
@@ -138,7 +138,7 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) 
   }
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 animate-message-appear">
       <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-stone-950 text-[10px] font-bold text-white dark:bg-white dark:text-stone-950">
         AI
       </div>

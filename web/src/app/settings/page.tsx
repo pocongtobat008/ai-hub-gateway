@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import {
   Atom,
-  BarChart3,
   BookOpen,
   Box,
   Clapperboard,
@@ -12,9 +11,7 @@ import {
   Database,
   FileJson,
   Gem,
-  Globe,
   Key,
-  Link,
   LoaderCircle,
   Shield,
 } from "lucide-react";
@@ -39,16 +36,11 @@ import { useSettingsStore } from "./store";
 
 const settingsTabs = [
   { value: "basic", title: "Basic", icon: Cog },
-  { value: "management", title: "Management", icon: Shield },
+  { value: "management", title: "Accounts", icon: Shield },
+  { value: "provider", title: "Providers", icon: Gem },
+  { value: "proxy", title: "Network", icon: Cloud },
+  { value: "tools", title: "Tools", icon: Box },
   { value: "backup", title: "Backup", icon: Database },
-  { value: "keys", title: "Keys", icon: Key },
-  { value: "api-docs", title: "API", icon: Globe },
-  { value: "canvas", title: "Canvas", icon: Box },
-  { value: "gemini", title: "Gemini", icon: Gem },
-  { value: "deepseek", title: "DeepSeek", icon: Atom },
-  { value: "proxy", title: "Proxy", icon: Cloud },
-  { value: "cpa", title: "CPA", icon: BarChart3 },
-  { value: "sub2api", title: "Sub2API", icon: Link },
 ];
 
 function SettingsDataController() {
@@ -90,17 +82,17 @@ function SettingsPageContent() {
       <SettingsDataController />
       <SettingsHeader />
       <Tabs defaultValue="basic" className="space-y-4">
-        <div className="sticky top-16 z-20 animate-fade-in">
-          <div className="glass-strong overflow-x-auto rounded-2xl border border-white/40 px-2 py-2 dark:border-white/5">
+        <div className="sticky top-0 lg:top-16 z-20 animate-fade-in">
+          <div className="hide-scrollbar glass-strong overflow-x-auto rounded-2xl border border-white/40 px-2 py-2 dark:border-white/5">
             <TabsList variant="line" className="min-w-max justify-start gap-1 bg-transparent p-0">
               {settingsTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all duration-200 data-[state=active]:bg-stone-800 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-stone-200 dark:data-[state=active]:text-stone-900"
+                  className="settings-tab flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-medium transition-all duration-200 sm:px-3.5 sm:py-2 sm:text-[13px]"
                 >
-                  <span className="text-xs"><tab.icon className="size-3.5" /></span>
-                  {tab.title}
+                  <tab.icon className="size-3.5" />
+                  <span className="hidden sm:inline">{tab.title}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -114,74 +106,50 @@ function SettingsPageContent() {
             <div className="glass-card rounded-2xl border border-white/40 p-6 dark:border-white/5">
               <h3 className="mb-4 text-lg font-bold tracking-tight">Account Management</h3>
               <p className="mb-4 text-sm text-stone-500">Quick links to manage all your AI provider accounts in one place.</p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <a href="/accounts" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <Key className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">GPT Accounts</div>
-                    <div className="text-[11px] text-stone-400">Manage OpenAI tokens</div>
-                  </div>
-                </a>
-                <a href="/gemini-accounts" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <Gem className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">Gemini Accounts</div>
-                    <div className="text-[11px] text-stone-400">Google account cookies</div>
-                  </div>
-                </a>
-                <a href="/deepseek-accounts" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <Atom className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">DeepSeek Accounts</div>
-                    <div className="text-[11px] text-stone-400">DeepSeek email/password</div>
-                  </div>
-                </a>
-                <a href="/image-manager" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <Clapperboard className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">Image Manager</div>
-                    <div className="text-[11px] text-stone-400">View generated images</div>
-                  </div>
-                </a>
-                <a href="/logs" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <FileJson className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">Request Logs</div>
-                    <div className="text-[11px] text-stone-400">Monitor API traffic</div>
-                  </div>
-                </a>
-                <a href="/debug" className="glass-card card-hover flex items-center gap-3 rounded-xl p-4 transition-all">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm dark:bg-stone-200 dark:text-stone-900">
-                    <BookOpen className="size-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">Debug Console</div>
-                    <div className="text-[11px] text-stone-400">Test & debug tools</div>
-                  </div>
-                </a>
+              <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
+                {[
+                  { href: "/accounts", label: "GPT Accounts", desc: "Manage OpenAI tokens", icon: Key },
+                  { href: "/gemini-accounts", label: "Gemini Accounts", desc: "Google account cookies", icon: Gem },
+                  { href: "/deepseek-accounts", label: "DeepSeek", desc: "DeepSeek email/password", icon: Atom },
+                  { href: "/image-manager", label: "Image Manager", desc: "View generated images", icon: Clapperboard },
+                  { href: "/logs", label: "Request Logs", desc: "Monitor API traffic", icon: FileJson },
+                  { href: "/debug", label: "Debug Console", desc: "Test & debug tools", icon: BookOpen },
+                ].map((card) => (
+                  <a key={card.href} href={card.href} className="glass-card card-hover flex items-center gap-3 rounded-xl p-3 transition-all sm:p-4">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm sm:size-10 dark:bg-stone-200 dark:text-stone-900">
+                      <card.icon className="size-4 sm:size-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">{card.label}</div>
+                      <div className="text-[11px] text-stone-400 truncate">{card.desc}</div>
+                    </div>
+                  </a>
+                ))}
               </div>
             </div>
           </div>
         </TabsContent>
-        <TabsContent value="proxy"><ProxyRuntimeCard /></TabsContent>
+        <TabsContent value="provider">
+          <div className="space-y-6">
+            <GeminiCard />
+            <DeepSeekCard />
+            <UserKeysCard />
+          </div>
+        </TabsContent>
+        <TabsContent value="proxy">
+          <div className="space-y-6">
+            <ProxyRuntimeCard />
+            <Sub2APIConnections />
+            <CPAPoolsCard />
+          </div>
+        </TabsContent>
+        <TabsContent value="tools">
+          <div className="space-y-6">
+            <ThirdPartyAppsCard />
+            <ApiDocsCard />
+          </div>
+        </TabsContent>
         <TabsContent value="backup"><BackupSettingsCard /></TabsContent>
-        <TabsContent value="keys"><UserKeysCard /></TabsContent>
-        <TabsContent value="canvas"><ThirdPartyAppsCard /></TabsContent>
-        <TabsContent value="gemini"><GeminiCard /></TabsContent>
-        <TabsContent value="deepseek"><DeepSeekCard /></TabsContent>
-        <TabsContent value="api-docs"><ApiDocsCard /></TabsContent>
-        <TabsContent value="cpa"><CPAPoolsCard /></TabsContent>
-        <TabsContent value="sub2api"><Sub2APIConnections /></TabsContent>
       </Tabs>
       <CPAPoolDialog />
       <ImportBrowserDialog />

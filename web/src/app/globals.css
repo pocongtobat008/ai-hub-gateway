@@ -131,21 +131,59 @@
   }
 }
 
-/* ── Modern startup animations ─────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════════
+   COMPREHENSIVE ANIMATION SYSTEM
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Core keyframes ─────────────────────────────────────────────────────────── */
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes fade-in-scale {
-  from { opacity: 0; transform: scale(0.97); }
+  from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slide-down {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-left {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.8) translateY(8px); }
+  60% { transform: scale(1.02) translateY(-1px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes spring-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  40% { transform: scale(1.03); }
+  60% { transform: scale(0.99); }
+  80% { transform: scale(1.01); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes shimmer {
@@ -155,17 +193,17 @@
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px); }
 }
 
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 12px rgba(120, 113, 108, 0.08); }
-  50% { box-shadow: 0 0 20px rgba(120, 113, 108, 0.15); }
+  50% { box-shadow: 0 0 24px rgba(120, 113, 108, 0.18); }
 }
 
 @keyframes gradient-shift {
@@ -174,20 +212,88 @@
 }
 
 @keyframes typing-dot {
-  0%, 60%, 100% { opacity: 0; transform: translateY(0); }
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-4px); }
 }
 
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(120, 113, 108, 0.1); }
+  50% { border-color: rgba(120, 113, 108, 0.25); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+
+@keyframes message-appear {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes streak {
+  from { transform: translateX(-100%) skewX(-15deg); }
+  to { transform: translateX(200%) skewX(-15deg); }
+}
+
+/* ── Animation utility classes ──────────────────────────────────────────────── */
+
 .animate-fade-in {
-  animation: fade-in 0.4s ease-out both;
+  animation: fade-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .animate-fade-in-scale {
-  animation: fade-in-scale 0.3s ease-out both;
+  animation: fade-in-scale 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .animate-slide-down {
-  animation: slide-down 0.3s ease-out both;
+  animation: slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-slide-left {
+  animation: slide-left 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-slide-right {
+  animation: slide-right 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-spring-in {
+  animation: spring-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .animate-shimmer {
@@ -213,7 +319,118 @@
   animation: gradient-shift 4s ease infinite;
 }
 
-/* ── Glassmorphism utilities ───────────────────────────────────────── */
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+.animate-message-appear {
+  animation: message-appear 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  animation: fade-in-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 500ms; }
+
+/* ── Micro-interaction utilities ────────────────────────────────────────────── */
+
+/* Button press effect */
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
+}
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+/* Hover lift */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Focus ring animation */
+.focus-ring {
+  transition: box-shadow 0.2s ease;
+}
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px rgba(120, 113, 108, 0.3);
+}
+
+/* Nav item hover effect */
+.nav-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-hover:hover {
+  background-color: rgba(120, 113, 108, 0.06);
+  transform: translateX(2px);
+}
+
+/* Sidebar link indicator */
+.sidebar-link-active {
+  position: relative;
+}
+.sidebar-link-active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: scale-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Loading skeleton with streak effect */
+.skeleton-streak {
+  position: relative;
+  overflow: hidden;
+  background: rgba(120, 113, 108, 0.06);
+}
+.skeleton-streak::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: streak 1.5s infinite;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.typing-indicator span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typing-dot 1.4s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Glassmorphism utilities ────────────────────────────────────────────────── */
 
 .glass {
   background: rgba(255, 255, 255, 0.7);
@@ -245,6 +462,7 @@
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
 }
 
 .dark .glass-card {
@@ -253,22 +471,16 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* ── Modern card hover ─────────────────────────────────────────────── */
-
-.card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover:hover {
+.glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.dark .card-hover:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+.dark .glass-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* ── Brand gradient text ──────────────────────────────────────────── */
+/* ── Brand gradient text ────────────────────────────────────────────────────── */
 
 .brand-text {
   background: linear-gradient(135deg, #171717 0%, #404040 50%, #171717 100%);
@@ -284,7 +496,7 @@
   background-clip: text;
 }
 
-/* ── Status indicator dots ────────────────────────────────────────── */
+/* ── Status indicator dots ──────────────────────────────────────────────────── */
 
 .status-dot {
   width: 6px;
@@ -296,6 +508,7 @@
 .status-dot-ready {
   background: #22c55e;
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  animation: pulse-soft 2s ease-in-out infinite;
 }
 
 .status-dot-warn {
@@ -308,11 +521,11 @@
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
 }
 
-/* ── Modern scrollbar ─────────────────────────────────────────────── */
+/* ── Modern scrollbar ───────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -320,8 +533,9 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(120, 113, 108, 0.2);
+  background: rgba(120, 113, 108, 0.15);
   border-radius: 100px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -329,20 +543,25 @@
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(168, 162, 158, 0.15);
+  background: rgba(168, 162, 158, 0.12);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(168, 162, 158, 0.3);
 }
 
-/* ── Tooltip / popover modern ─────────────────────────────────────── */
+/* ── Tooltip / popover ──────────────────────────────────────────────────────── */
 
 [data-radix-popper-content-wrapper] {
   z-index: 50 !important;
 }
 
-/* ── Tool badge ───────────────────────────────────────────────────── */
+/* Popover animation */
+[data-radix-popper-content-wrapper] [data-state="open"] {
+  animation: pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Tool badge ─────────────────────────────────────────────────────────────── */
 
 .tool-badge {
   display: inline-flex;
@@ -352,9 +571,13 @@
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   user-select: none;
+}
+
+.tool-badge:active {
+  transform: scale(0.95);
 }
 
 .tool-badge-active {
@@ -379,19 +602,20 @@
 
 .tool-badge-inactive:hover {
   background: rgba(120, 113, 108, 0.15);
+  transform: translateY(-1px);
 }
 
 .dark .tool-badge-inactive:hover {
   background: rgba(168, 162, 158, 0.18);
 }
 
-/* ── Input area modern ────────────────────────────────────────────── */
+/* ── Input area ─────────────────────────────────────────────────────────────── */
 
 .chat-input-wrapper {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1.5px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -403,16 +627,17 @@
 }
 
 .chat-input-wrapper:focus-within {
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 .dark .chat-input-wrapper:focus-within {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* ── Hide scrollbar utility ───────────────────────────────────────── */
+/* ── Hide scrollbar ─────────────────────────────────────────────────────────── */
 
 @layer utilities {
   .hide-scrollbar {
@@ -425,89 +650,126 @@
   }
 }
 
-/* ── Dark mode overrides ──────────────────────────────────────────── */
+/* ── Settings tab active state ──────────────────────────────────────────────── */
 
-.dark .bg-white,
-.dark .bg-white\\/85,
-.dark .bg-white\\/90,
-.dark .bg-white\\/95,
-.dark .hover\\:bg-white:hover {
+.settings-tab[data-state="active"] {
+  background-color: #1c1917 !important;
+  color: #fafaf9 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
+  transform: scale(1.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .settings-tab[data-state="active"] {
+  background-color: #f5f5f4 !important;
+  color: #1c1917 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.settings-tab[data-state="inactive"] {
+  background-color: transparent !important;
+  color: #78716c !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .settings-tab[data-state="inactive"] {
+  color: #a8a29e !important;
+}
+
+.settings-tab[data-state="inactive"]:hover {
+  background-color: rgba(120, 113, 108, 0.08) !important;
+  color: #44403c !important;
+}
+
+.dark .settings-tab[data-state="inactive"]:hover {
+  background-color: rgba(168, 162, 158, 0.1) !important;
+  color: #d6d3d1 !important;
+}
+
+/* ── Mobile responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  [data-radix-dialog-content] {
+    width: calc(100vw - 24px) !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 16px !important;
+  }
+
+  .chat-input-wrapper {
+    border-radius: 20px !important;
+  }
+
+  [role="tablist"] {
+    gap: 4px !important;
+  }
+}
+
+/* ── Touch device ───────────────────────────────────────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  .glass-card:hover {
+    transform: none;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+
+  button, a, [role="button"] {
+    min-height: 32px;
+  }
+}
+
+/* ── Dark mode overrides ────────────────────────────────────────────────────── */
+
+.dark [class*="bg-white"] {
   background-color: rgb(28 25 23 / 0.88) !important;
 }
 
-.dark .bg-white\\/80,
-.dark .bg-white\\/70,
-.dark .bg-white\\/60 {
-  background-color: rgb(41 37 36 / 0.65) !important;
-}
-
-.dark .bg-stone-50,
-.dark .bg-stone-50\\/70,
-.dark .hover\\:bg-stone-50\\/70:hover,
-.dark .bg-stone-100,
-.dark .hover\\:bg-stone-100:hover,
-.dark .hover\\:bg-stone-200:hover {
+.dark [class*="bg-stone-50"],
+.dark [class*="bg-stone-100"] {
   background-color: rgb(41 37 36 / 0.78) !important;
 }
 
-.dark .bg-stone-200 {
+.dark [class*="bg-stone-200"] {
   background-color: rgb(68 64 60 / 0.85) !important;
 }
 
-.dark .border-white,
-.dark .border-white\\/80,
-.dark .border-white\\/70,
-.dark .border-stone-100,
-.dark .border-stone-100\\/80,
-.dark .border-stone-100\\/50,
-.dark .border-stone-200,
-.dark .border-stone-200\\/70,
-.dark .border-stone-300,
-.dark .focus-visible\\:border-stone-300:focus-visible {
+.dark [class*="border-white"],
+.dark [class*="border-stone-100"],
+.dark [class*="border-stone-200"],
+.dark [class*="border-stone-300"] {
   border-color: rgb(255 255 255 / 0.08) !important;
 }
 
-.dark .text-stone-950,
-.dark .text-stone-900,
-.dark .text-stone-800 {
+.dark [class*="text-stone-950"],
+.dark [class*="text-stone-900"],
+.dark [class*="text-stone-800"] {
   color: rgb(250 250 249) !important;
 }
 
-.dark .text-stone-700,
-.dark .text-stone-600 {
+.dark [class*="text-stone-700"],
+.dark [class*="text-stone-600"] {
   color: rgb(214 211 209) !important;
 }
 
-.dark .text-stone-500,
-.dark .text-stone-400 {
+.dark [class*="text-stone-500"],
+.dark [class*="text-stone-400"] {
   color: rgb(168 162 158) !important;
 }
 
-.dark .text-stone-300 {
+.dark [class*="text-stone-300"] {
   color: rgb(214 211 209) !important;
 }
 
-.dark .placeholder\\:text-stone-400::placeholder,
-.dark .placeholder\\:text-muted-foreground::placeholder {
+.dark ::placeholder {
   color: rgb(120 113 108) !important;
 }
 
-.dark .hover\\:text-stone-700:hover,
-.dark .hover\\:text-stone-800:hover,
-.dark .hover\\:text-stone-900:hover {
-  color: rgb(250 250 249) !important;
-}
-
-.dark .shadow-sm,
-.dark .shadow-xs,
-.dark [class*="shadow-"] {
+.dark [class*="shadow-sm"],
+.dark [class*="shadow-xs"] {
   box-shadow: none !important;
 }
 
-@keyframes grow {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
+/* ── View transitions ───────────────────────────────────────────────────────── */
 
 ::view-transition-old(root), ::view-transition-new(root) {
   animation: none;

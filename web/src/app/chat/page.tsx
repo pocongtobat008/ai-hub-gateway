@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, History, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, History, LoaderCircle, Menu, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
+import { triggerConfetti } from "@/components/confetti";
 import webConfig from "@/constants/common-env";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useSidebarCallbacks } from "@/components/sidebar-shell";
@@ -645,6 +646,10 @@ function ChatPageContent() {
           throw new Error("No result returned");
         }
         await setAssistantContent(content);
+        // Confetti on image/video generation success
+        if (tool === "image" || tool === "video") {
+          triggerConfetti();
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Tool failed";
         toast.error(message);
@@ -718,32 +723,37 @@ function ChatPageContent() {
 
   return (
     <>
-      <section className="mx-auto grid h-[calc(100dvh-2rem)] min-h-0 w-full overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-3rem)] sm:px-3 sm:pb-6">
+      <section className="mx-auto grid h-[calc(100dvh-1rem)] min-h-0 w-full overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-3rem)] sm:pb-6">
         <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
-          <div className="flex items-center justify-between gap-2 px-1 lg:hidden">
+          <div className="flex items-center gap-2 px-1 lg:hidden">
             <Button
               variant="outline"
-              className="h-10 flex-1 rounded-2xl border-stone-200 bg-white/90 text-stone-700 shadow-sm"
-              onClick={() => setIsHistoryOpen(true)}
+              size="sm"
+              className="h-9 shrink-0 rounded-xl border-stone-200 bg-white/90 px-2 text-stone-600 shadow-sm"
+              onClick={() => (window as any).__sidebarOpenMobile?.()}
+              aria-label="Open menu"
             >
-              <History className="mr-2 size-4" />
-              History ({conversations.length})
+              <Menu className="size-4" />
             </Button>
+            <div className="flex-1 truncate text-sm font-semibold text-stone-800 dark:text-stone-200">
+              {selectedConversation?.title || 'New chat'}
+            </div>
             <Button
-              className="h-10 rounded-2xl bg-stone-950 text-white shadow-sm"
+              className="h-9 shrink-0 rounded-xl bg-stone-900 px-3 text-white shadow-sm"
               onClick={handleCreateDraft}
             >
-              <Plus className="size-4" />
-              New
+              <Plus className="size-3.5" />
+              <span className="hidden sm:inline">New</span>
             </Button>
             <Button
               variant="outline"
-              className="h-10 rounded-2xl border-stone-200 bg-white/85 px-3 text-stone-600 shadow-sm"
+              size="sm"
+              className="h-9 shrink-0 rounded-xl border-stone-200 bg-white/85 px-2 text-stone-500 shadow-sm"
               onClick={() => setDeleteConfirm({ id: "__all__" })}
               disabled={conversations.length === 0}
               aria-label="Clear all chats"
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
 
@@ -844,9 +854,9 @@ function ChatPageContent() {
 
       {deleteConfirm ? (
         <Dialog open onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
-          <DialogContent showCloseButton={false} className="rounded-2xl p-6">
+          <DialogContent showCloseButton={false} className="rounded-2xl p-6 sm:max-w-sm">
             <DialogHeader className="gap-2">
-              <DialogTitle>
+              <DialogTitle className="text-base">
                 {deleteConfirm.id === "__all__" ? "Clear Chat History" : "Delete Chat"}
               </DialogTitle>
               <DialogDescription className="text-sm leading-6">
@@ -856,11 +866,11 @@ function ChatPageContent() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              <Button variant="outline" className="h-9 rounded-xl" onClick={() => setDeleteConfirm(null)}>
                 Cancel
               </Button>
               <Button
-                className="bg-rose-600 text-white hover:bg-rose-700"
+                className="h-9 rounded-xl bg-stone-900 text-white hover:bg-stone-800"
                 onClick={() => {
                   const id = deleteConfirm.id;
                   setDeleteConfirm(null);
