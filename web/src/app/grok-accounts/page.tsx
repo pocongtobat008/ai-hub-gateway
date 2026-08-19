@@ -78,6 +78,7 @@ function GrokAccountsContent() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const didLoadRef = useRef(false);
 
@@ -185,6 +186,23 @@ function GrokAccountsContent() {
       toast.error(error instanceof Error ? error.message : "Test failed");
     } finally {
       setTestingId(null);
+    }
+  };
+
+  const handleRefreshOne = async (account: GrokAccount) => {
+    setRefreshingId(account.id);
+    try {
+      const data = await testGrok({ account_id: account.id });
+      if (data.result.ok) {
+        toast.success(`${account.label}: refreshed OK`);
+      } else {
+        toast.error(`${account.label}: ${data.result.error}`);
+      }
+      await loadAccounts(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -342,6 +360,9 @@ function GrokAccountsContent() {
                     <div className="flex shrink-0 items-center gap-1">
                       <Button variant="ghost" size="icon" className="size-8" onClick={() => void handleTest(account)} disabled={testingId === account.id} title="Test">
                         {testingId === account.id ? <LoaderCircle className="size-4 animate-spin" /> : <PlugZap className="size-4" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-8" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id || testingId === account.id} title="Refresh">
+                        <RefreshCw className={`size-4 ${refreshingId === account.id ? "animate-spin" : ""}`} />
                       </Button>
                       <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(account)} title="Edit"><Pencil className="size-4" /></Button>
                       <Button variant="ghost" size="icon" className="size-8 text-rose-500 hover:text-rose-600" onClick={() => setDeleteConfirm(account)} title="Delete"><Trash2 className="size-4" /></Button>

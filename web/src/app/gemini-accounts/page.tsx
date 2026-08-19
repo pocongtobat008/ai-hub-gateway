@@ -72,6 +72,7 @@ function GeminiAccountsContent() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const didLoadRef = useRef(false);
 
   const loadAccounts = useCallback(async (silent = false) => {
@@ -191,6 +192,23 @@ function GeminiAccountsContent() {
   };
 
   const usableCount = accounts.filter((account) => account.status === "normal").length;
+
+  const handleRefreshOne = async (account: GeminiAccount) => {
+    setRefreshingId(account.id);
+    try {
+      const data = await testGemini(account.id);
+      if (data.result.ok) {
+        toast.success(`${account.email || account.label}: refreshed OK`);
+      } else {
+        toast.error(`${account.email || account.label}: ${data.result.error}`);
+      }
+      await loadAccounts(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      setRefreshingId(null);
+    }
+  };
 
   const handleRefreshAll = async () => {
     setIsRefreshingAll(true);
@@ -337,6 +355,16 @@ function GeminiAccountsContent() {
                     >
                       {testingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <PlugZap className="size-3" />}
                       Test
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => void handleRefreshOne(account)}
+                      disabled={refreshingId === account.id || testingId === account.id}
+                      title="Refresh"
+                    >
+                      <RefreshCw className={`size-4 ${refreshingId === account.id ? "animate-spin" : ""}`} />
                     </Button>
                     <Button
                       variant="outline"
