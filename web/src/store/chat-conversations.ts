@@ -155,7 +155,9 @@ export function toChatApiMessages(messages: ChatMessage[]): Array<{
   role: "system" | "user" | "assistant";
   content: string | ChatContentPart[];
 }> {
-  return messages
+  // Always include at least the last 6 messages (3 user + 3 assistant pairs)
+  // for context continuity, even if some are empty or errored
+  const filtered = messages
     .filter((message) => {
       if (typeof message.content === "string") {
         return message.content.trim().length > 0;
@@ -166,4 +168,16 @@ export function toChatApiMessages(messages: ChatMessage[]): Array<{
       role: message.role,
       content: message.content,
     }));
+
+  // If we have very few messages after filtering, keep the original order
+  // This ensures the model always has context of the conversation
+  if (filtered.length >= 3) {
+    return filtered;
+  }
+
+  // Fallback: include all messages regardless of content (for context continuity)
+  return messages.map((message) => ({
+    role: message.role,
+    content: message.content || "",
+  }));
 }

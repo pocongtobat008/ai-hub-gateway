@@ -42,14 +42,14 @@ function extractErrorMessage(payload: unknown): string {
       return detail.error;
     }
     if (detail.error && typeof detail.error === "object") {
-      const nested = detail.error as { message?: unknown };
+      const nested = detail.error as { message?: string };
       if (typeof nested.message === "string") {
         return nested.message;
       }
     }
   }
   if (value.error && typeof value.error === "object") {
-    const nested = value.error as { message?: unknown };
+    const nested = value.error as { message?: string };
     if (typeof nested.message === "string") {
       return nested.message;
     }
@@ -57,10 +57,19 @@ function extractErrorMessage(payload: unknown): string {
   return "";
 }
 
+// System context message to maximize model understanding
+const SYSTEM_CONTEXT = `You are an AI assistant powered by BecomeAI. You have access to the full conversation history above. Always maintain context from previous messages when responding. If the user refers to something from earlier in the conversation, use that context to provide accurate and relevant responses. Be helpful, concise, and maintain a natural conversational flow.`;
+
 export async function streamChatCompletion(options: StreamOptions): Promise<StreamResult> {
   const { model, messages, reasoningEffort, gem, accountId, signal, onDelta } = options;
   const authKey = await getStoredAuthKey();
   const baseUrl = webConfig.apiUrl.replace(/\/$/, "");
+
+  // Prepend system context message if not already present
+  const hasSystemMessage = messages.length > 0 && messages[0].role === "system";
+  const messagesWithContext = hasSystemMessage
+    ? messages
+    : [{ role: "system" as const, content: SYSTEM_CONTEXT }, ...messages];
 
   let response: Response;
   try {
@@ -72,7 +81,7 @@ export async function streamChatCompletion(options: StreamOptions): Promise<Stre
       },
       body: JSON.stringify({
         model: model.trim() || "auto",
-        messages,
+        messages: messagesWithContext,
         stream: true,
         ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
         ...(gem ? { gem } : {}),

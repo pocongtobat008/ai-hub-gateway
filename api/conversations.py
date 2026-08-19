@@ -33,8 +33,8 @@ def _load() -> list[dict[str, Any]]:
 
 def _save(items: list[dict[str, Any]]) -> None:
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    # Keep max 200 conversations to avoid bloat
-    items = items[:200]
+    # Keep max 500 conversations for better context retention
+    items = items[:500]
     with open(_CONVERSATIONS_FILE, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
 
@@ -83,6 +83,9 @@ def create_router() -> APIRouter:
     async def save_conversation(req: SaveRequest):
         items = _load()
         conv = req.conversation.model_dump()
+        # Limit messages per conversation to 200 (keeps context but prevents bloat)
+        if "messages" in conv and isinstance(conv["messages"], list):
+            conv["messages"] = conv["messages"][-200:]
         # Remove duplicates
         items = [i for i in items if i.get("id") != conv["id"]]
         items.insert(0, conv)

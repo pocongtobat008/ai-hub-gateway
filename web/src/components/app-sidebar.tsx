@@ -79,7 +79,8 @@ function SidebarLink({
   collapsed: boolean;
   index?: number;
 }) {
-  const active = pathname === item.href || (item.href !== "/chat" && pathname.startsWith(item.href));
+  // Exact match only — no startsWith to avoid /gemini matching /gemini-accounts
+  const active = pathname === item.href;
   const Icon = item.icon;
 
   return (

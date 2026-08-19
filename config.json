@@ -47,7 +47,7 @@
     "prompt": ""
   },
   "backup": {
-    "enabled": false,
+    "enabled": true,
     "provider": "cloudflare_r2",
     "account_id": "admin",
     "access_key_id": "",
@@ -56,7 +56,7 @@
     "prefix": "backups",
     "interval_minutes": 1440,
     "rotation_keep": 10,
-    "encrypt": false,
+    "encrypt": true,
     "passphrase": "",
     "include": {
       "config": true,
