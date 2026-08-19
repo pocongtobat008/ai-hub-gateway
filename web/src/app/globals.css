@@ -775,3 +775,104 @@
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* ── Mobile app-like experience ───────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* Safe area padding for mobile */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Full-screen chat on mobile */
+  .chat-input-wrapper {
+    border-radius: 20px !important;
+    border: none !important;
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.06) !important;
+  }
+
+  /* Mobile dialog fullscreen */
+  [data-slot="dialog-content"],
+  [data-radix-dialog-content] {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    max-height: 90vh !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+
+  /* Mobile select dropdown */
+  [data-radix-select-content] {
+    max-height: 50vh !important;
+  }
+
+  /* Mobile tabs horizontal scroll */
+  [role="tablist"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Mobile popover solid bg */
+  [data-radix-popper-content-wrapper] {
+    max-width: calc(100vw - 32px) !important;
+  }
+}
+
+/* ── Popover solid background override ─────────────────────────────────────── */
+[data-slot="popover-content"],
+[data-radix-popover-content] {
+  background-color: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark [data-slot="popover-content"],
+.dark [data-radix-popover-content] {
+  background-color: #1c1917 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ── Select content solid bg ───────────────────────────────────────────────── */
+[data-slot="select-content"],
+[data-radix-select-content] {
+  background-color: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+}
+
+.dark [data-slot="select-content"],
+.dark [data-radix-select-content] {
+  background-color: #1c1917 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Touch-friendly mobile buttons ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  button, a[role="link"], [role="button"] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Compact mobile toolbar */
+  .chat-input-wrapper .flex.items-end {
+    padding: 8px 12px !important;
+  }
+}
+
+/* ── Smooth page transitions ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

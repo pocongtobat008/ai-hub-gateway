@@ -316,7 +316,7 @@ function ChatPageContent() {
     }
     const storedTool =
       typeof window !== "undefined" ? window.localStorage.getItem(CHAT_TOOL_STORAGE_KEY) : null;
-    if (storedTool === "image" || storedTool === "canvas" || storedTool === "video" || storedTool === "research") {
+    if (storedTool === "image" || storedTool === "canvas" || storedTool === "infinite-canvas" || storedTool === "video" || storedTool === "research") {
       setTool(storedTool);
     }
   }, []);
@@ -615,7 +615,7 @@ function ChatPageContent() {
 
       try {
         let content = "";
-        if (tool === "image" || tool === "canvas") {
+        if (tool === "image" || tool === "canvas" || tool === "infinite-canvas") {
           const referenceFiles = attachedImages.map((image) => dataUrlToFile(image.dataUrl, image.name));
           const isEdit = tool === "canvas" && referenceFiles.length > 0;
           const response = isEdit

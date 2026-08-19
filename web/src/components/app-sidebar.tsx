@@ -256,20 +256,20 @@ export function AppSidebar({
               <span className="text-[14px] font-bold tracking-tight brand-text">BecomeAI</span>
             </div>
           )}
-          {/* Desktop collapse button */}
+          {/* Collapse/Expand toggle — desktop */}
           <button
             type="button"
             onClick={() => onCollapsedChange(!collapsed)}
             className="hidden lg:inline-flex size-6 shrink-0 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:scale-110 dark:hover:bg-white/8 dark:hover:text-stone-200"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <PanelLeftOpen className={cn("size-3.5 transition-transform duration-300", !collapsed && "rotate-180")} />
+            {collapsed ? <PanelLeftOpen className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
           </button>
-          {/* Mobile close button */}
+          {/* Close button — mobile only */}
           <button
             type="button"
             onClick={() => onMobileOpenChange(false)}
-            className="lg:hidden inline-flex size-6 shrink-0 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:rotate-90"
+            className="lg:hidden inline-flex size-6 shrink-0 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:scale-110"
             title="Close menu"
           >
             <PanelLeftClose className="size-3.5" />

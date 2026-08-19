@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Atom, Check, Clapperboard, Compass, ImagePlus, Layers, Square, Wand2, X } from "lucide-react";
+import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Square, Wand2, X } from "lucide-react";
 import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,12 +30,13 @@ export type ComposerAccount = {
   name: string;
 };
 
-export type ComposerTool = "auto" | "image" | "canvas" | "video" | "research";
+export type ComposerTool = "auto" | "image" | "canvas" | "infinite-canvas" | "video" | "research";
 
 export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: React.ElementType; desc: string }> = [
   { value: "auto", label: "Auto", icon: Atom, desc: "Let AI decide the best model" },
   { value: "image", label: "Image Gen", icon: Layers, desc: "Generate images with AI" },
   { value: "canvas", label: "Canvas", icon: Compass, desc: "Edit or create on canvas" },
+  { value: "infinite-canvas", label: "Infinite Canvas", icon: Box, desc: "Unlimited creative workspace" },
   { value: "video", label: "Video", icon: Clapperboard, desc: "Generate video with Veo" },
   { value: "research", label: "Research", icon: Wand2, desc: "Deep research with Gemini" },
 ];
@@ -251,7 +252,7 @@ export function ChatComposer({
                       </svg>
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" sideOffset={8} className="w-64 p-1.5 rounded-2xl glass-card z-[120]">
+                  <PopoverContent align="start" sideOffset={8} className="w-64 p-1.5 rounded-2xl bg-white border border-stone-200 shadow-xl z-[120] dark:bg-stone-900 dark:border-white/10 dark:shadow-2xl">
                     {TOOL_OPTIONS.map((option) => {
                       const OptionIcon = option.icon;
                       return (
