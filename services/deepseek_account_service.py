@@ -260,6 +260,10 @@ class DeepSeekAccountService:
                     if any(token in lower for token in ("401", "logged out", "session expired", "auth failed", "unauthorized", "permission denied", "invalid credentials", "wrong password", "password_or_user_name_is_wrong", "account not exist", "user not found")):
                         item["status"] = "abnormal"
                         item["restore_at"] = None
+                    elif "muted" in lower or "banned" in lower or "restricted" in lower:
+                        # Account is muted/banned — set long cooldown (24h)
+                        item["status"] = "rate_limited"
+                        item["restore_at"] = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(timespec="seconds")
                     elif any(token in lower for token in ("rate limit", "quota", "429", "too many", "temporarily", "timeout", "timed out")):
                         item["status"] = "rate_limited"
                         item["restore_at"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(timespec="seconds")

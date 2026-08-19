@@ -261,6 +261,9 @@ class GeminiAccountService:
                     if any(token in lower for token in ("401", "logged out", "session expired", "auth failed", "unauthorized", "permission denied")):
                         item["status"] = "abnormal"
                         item["restore_at"] = None
+                    elif "unauthenticated" in lower or "muted" in lower or "banned" in lower:
+                        item["status"] = "abnormal"
+                        item["restore_at"] = None
                     elif any(token in lower for token in ("rate limit", "quota", "429", "too many", "temporarily", "timeout", "timed out")):
                         item["status"] = "rate_limited"
                         from datetime import timedelta

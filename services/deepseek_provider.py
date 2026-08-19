@@ -1185,7 +1185,8 @@ class DeepSeekProvider:
         # Failover: if an account fails to authenticate (bad password, expired
         # session, rate-limit on login), _chat_once marks it and raises before
         # any streaming starts, so we transparently retry with another account.
-        for _ in range(6):
+        total_accounts = len(deepseek_account_service.list_accounts()) or 6
+        for _ in range(total_accounts):
             account = self._pick_account(prefer_id=account_id)
             if account is None:
                 break

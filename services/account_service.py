@@ -1044,7 +1044,7 @@ class AccountService:
             candidates = [
                 token
                 for account in self._accounts.values()
-                if account.get("status") not in {"disabled", "abnormal"}
+                if account.get("status") not in {"disabled", "abnormal", "rate_limited"}
                    and (
                        route is None
                        or self._normalize_account_type(account.get("type")) in route.account_types

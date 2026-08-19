@@ -77,6 +77,20 @@ def is_token_invalid_error(message: str) -> bool:
     )
 
 
+def is_rate_limit_error(message: str) -> bool:
+    """Detect rate-limit errors that should trigger account rotation."""
+    text = str(message or "").lower()
+    return (
+        "rate_limit" in text
+        or "rate limit" in text
+        or "429" in text
+        or "too many requests" in text
+        or "quota exceeded" in text
+        or "temporarily rate limited" in text
+        or "you have been rate limited" in text
+    )
+
+
 def is_tls_connection_error(message: str) -> bool:
     """检测 TLS/SSL 连接错误，这类错误通常可以通过重试解决。"""
     text = str(message or "").lower()
@@ -739,18 +753,31 @@ def stream_text_deltas(backend: OpenAIBackendAPI, request: ConversationRequest) 
             return
         except Exception as exc:
             error_message = str(exc)
-            if token and not emitted and is_token_invalid_error(error_message):
-                refreshed_token = account_service.refresh_access_token(token, force=True, event="text_stream")
-                if refreshed_token and refreshed_token != token and refreshed_token not in attempted_tokens:
-                    token = refreshed_token
-                else:
-                    account_service.remove_invalid_token(token, "text_stream")
+            if token and not emitted:
+                if is_token_invalid_error(error_message):
+                    refreshed_token = account_service.refresh_access_token(token, force=True, event="text_stream")
+                    if refreshed_token and refreshed_token != token and refreshed_token not in attempted_tokens:
+                        token = refreshed_token
+                    else:
+                        account_service.remove_invalid_token(token, "text_stream")
+                        token = account_service.get_text_access_token(
+                            excluded_tokens=set(attempted_tokens),
+                            model=request.model,
+                        )
+                    if token:
+                        continue
+                elif is_rate_limit_error(error_message):
+                    # Mark account as rate-limited, then rotate to the next one
+                    account_service.update_account(token, {
+                        "status": "rate_limited",
+                        "restore_at": None,
+                    }, quiet=True)
                     token = account_service.get_text_access_token(
                         excluded_tokens=set(attempted_tokens),
                         model=request.model,
                     )
-                if token:
-                    continue
+                    if token:
+                        continue
             raise
         finally:
             if active_backend is not None:
