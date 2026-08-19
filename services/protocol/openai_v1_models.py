@@ -5,6 +5,7 @@ from typing import Any
 from services.account_service import account_service
 from services.deepseek_provider import deepseek_provider
 from services.gemini_provider import gemini_provider
+from services.grok_provider import grok_provider
 from services.model_service import model_catalog_service
 from utils.helper import CODEX_IMAGE_MODEL
 
@@ -99,4 +100,28 @@ def list_models() -> dict[str, Any]:
                 })
         except Exception:
             pass
+
+    if grok_provider.is_enabled():
+        try:
+            grok_models = grok_provider.list_models()
+            for grok_model in grok_models:
+                model_id = str(grok_model.get("id") or "").strip()
+                if not model_id or model_id in seen:
+                    continue
+                seen.add(model_id)
+                data.append({
+                    "id": model_id,
+                    "object": "model",
+                    "created": 0,
+                    "owned_by": "xai",
+                    "permission": [],
+                    "root": model_id,
+                    "parent": None,
+                    "capabilities": ["chat"],
+                    "available": True,
+                    "display_name": model_id,
+                })
+        except Exception:
+            pass
+
     return result

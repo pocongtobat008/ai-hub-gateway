@@ -249,6 +249,33 @@ export type DeepSeekStatus = {
   usable?: number;
 };
 
+export type GrokAccount = {
+  id: string;
+  sso?: string;
+  label?: string;
+  proxy?: string;
+  status: "normal" | "rate_limited" | "abnormal" | "disabled";
+  success?: number;
+  fail?: number;
+  invalid_count?: number;
+  last_used_at?: string | null;
+  last_invalid_at?: string | null;
+  last_error?: string | null;
+  restore_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GrokStatus = {
+  enabled: boolean;
+  configured: boolean;
+  ready: boolean;
+  error: string;
+  accounts?: GrokAccount[];
+  total?: number;
+  usable?: number;
+};
+
 export type GeminiGem = {
   id: string;
   name: string;
@@ -699,6 +726,53 @@ export async function updateDeepSeekAccount(
 
 export async function deleteDeepSeekAccount(id: string) {
   return httpRequest<{ ok: boolean; accounts: DeepSeekAccount[] }>(`/api/deepseek/accounts/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchGrokStatus() {
+  return httpRequest<{ result: GrokStatus }>("/api/grok/status");
+}
+
+export async function testGrok(input: { sso: string; proxy?: string }) {
+  return httpRequest<{ result: { ok: boolean; error: string; name?: string } }>("/api/grok/test", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function fetchGrokAccounts() {
+  return httpRequest<{ accounts: GrokAccount[] }>("/api/grok/accounts");
+}
+
+export async function createGrokAccount(input: {
+  sso: string;
+  label?: string;
+  proxy?: string;
+}) {
+  return httpRequest<{ account: GrokAccount; accounts: GrokAccount[] }>("/api/grok/accounts", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function updateGrokAccount(
+  id: string,
+  input: Partial<{
+    sso: string;
+    label: string;
+    proxy: string;
+    status: string;
+  }>,
+) {
+  return httpRequest<{ account: GrokAccount; accounts: GrokAccount[] }>(`/api/grok/accounts/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export async function deleteGrokAccount(id: string) {
+  return httpRequest<{ ok: boolean; accounts: GrokAccount[] }>(`/api/grok/accounts/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

@@ -47,6 +47,7 @@ const accountNav: NavItem[] = [
   { href: "/accounts", label: "GPT Accounts", icon: Cog },
   { href: "/gemini-accounts", label: "Gemini Accounts", icon: Gem },
   { href: "/deepseek-accounts", label: "DeepSeek", icon: Atom },
+  { href: "/grok-accounts", label: "Grok", icon: Zap },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 
