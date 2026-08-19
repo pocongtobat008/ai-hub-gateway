@@ -741,6 +741,18 @@ export async function testGrok(input: { account_id?: string; api_key?: string; a
   });
 }
 
+export async function testAllGrok() {
+  return httpRequest<{ total: number; ok: number; fail: number; accounts: GrokAccount[] }>("/api/grok/test-all", {
+    method: "POST",
+  });
+}
+
+export async function resetGrokAccounts() {
+  return httpRequest<{ ok: boolean; accounts: GrokAccount[] }>("/api/grok/reset", {
+    method: "POST",
+  });
+}
+
 export async function fetchGrokAccounts() {
   return httpRequest<{ accounts: GrokAccount[] }>("/api/grok/accounts");
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clipboard, LoaderCircle, Pencil, Plus, PlugZap, Trash2, Zap } from "lucide-react";
+import { Clipboard, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import {
   deleteGrokAccount,
   fetchGrokAccounts,
   testGrok,
+  testAllGrok,
+  resetGrokAccounts,
   updateGrokAccount,
   type GrokAccount,
 } from "@/lib/api";
@@ -74,6 +76,8 @@ function GrokAccountsContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<GrokAccount | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const didLoadRef = useRef(false);
 
@@ -184,6 +188,37 @@ function GrokAccountsContent() {
     }
   };
 
+  const handleRefreshAll = async () => {
+    setIsRefreshingAll(true);
+    try {
+      toast.info("Testing all accounts...");
+      const data = await testAllGrok();
+      setAccounts(data.accounts);
+      if (data.fail > 0) {
+        toast.warning(`Refreshed: ${data.ok} OK, ${data.fail} failed (out of ${data.total})`);
+      } else {
+        toast.success(`All ${data.ok} accounts OK!`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      setIsRefreshingAll(false);
+    }
+  };
+
+  const handleResetAll = async () => {
+    setIsResetting(true);
+    try {
+      const data = await resetGrokAccounts();
+      setAccounts(data.accounts);
+      toast.success("All accounts reset to normal");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Reset failed");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -193,10 +228,35 @@ function GrokAccountsContent() {
             Manage Grok accounts for round-robin rotation. Supports xAI API key (recommended) or browser cookies.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowHelp(!showHelp)}>
-            <Clipboard className="mr-1 size-4" />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHelp(!showHelp)}
+            className="gap-1.5"
+          >
+            <Clipboard className="size-4" />
             Setup Guide
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleRefreshAll()}
+            disabled={isRefreshingAll || isResetting || accounts.length === 0}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`size-4 ${isRefreshingAll ? "animate-spin" : ""}`} />
+            Refresh All
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleResetAll()}
+            disabled={isRefreshingAll || isResetting}
+            className="gap-1.5"
+          >
+            <RotateCcw className={`size-4 ${isResetting ? "animate-spin" : ""}`} />
+            Reset All
           </Button>
           <Button onClick={openAdd} size="sm" className="gap-1.5">
             <Plus className="size-4" />

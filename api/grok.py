@@ -115,4 +115,67 @@ def create_router() -> APIRouter:
         )
         return {"result": result}
 
+    @router.post("/api/grok/test-all")
+    async def test_all_accounts(authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        accounts = grok_account_service.list_accounts()
+        results: list[dict] = []
+        ok_count = 0
+        fail_count = 0
+        for acc in accounts:
+            acc_id = acc.get("id", "")
+            creds = grok_account_service.get_credentials(acc_id)
+            if not creds:
+                results.append({"id": acc_id, "label": acc.get("label", ""), "ok": False, "error": "No credentials"})
+                fail_count += 1
+                continue
+            try:
+                result = grok_provider.test_account(
+                    api_key=creds.get("api_key", ""),
+                    access_token=creds.get("access_token", ""),
+                    refresh_token=creds.get("refresh_token", ""),
+                    cookies=creds.get("cookies"),
+                    proxy=creds.get("proxy", ""),
+                )
+                results.append({"id": acc_id, "label": acc.get("label", ""), **result})
+                if result.get("ok"):
+                    ok_count += 1
+                    grok_account_service.mark_used(acc_id, ok=True)
+                else:
+                    fail_count += 1
+                    grok_account_service.mark_used(acc_id, ok=False, error=result.get("error", "test failed"))
+            except Exception as exc:
+                results.append({"id": acc_id, "label": acc.get("label", ""), "ok": False, "error": str(exc)[:100]})
+                fail_count += 1
+        return {
+            "total": len(accounts),
+            "ok": ok_count,
+            "fail": fail_count,
+            "accounts": grok_account_service.list_accounts(),
+        }
+
+    @router.post("/api/grok/reset")
+    async def reset_all_accounts(authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        accounts = grok_account_service.list_accounts()
+        for acc in accounts:
+            grok_account_service.update_account(acc["id"], {
+                "status": "normal",
+            })
+        # Also clear errors in the raw file
+        import json
+        store = grok_account_service._store_file
+        if store.exists():
+            data = json.loads(store.read_text(encoding="utf-8"))
+            items = data.get("accounts", []) if isinstance(data, dict) else data
+            for item in items:
+                item["status"] = "normal"
+                item["last_error"] = None
+                item["last_error_at"] = None
+                item["fail"] = 0
+                item["invalid_count"] = 0
+                item["restore_at"] = None
+            store.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return {"ok": True, "accounts": grok_account_service.list_accounts()}
+
     return router
