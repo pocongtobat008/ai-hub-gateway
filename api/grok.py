@@ -1,4 +1,4 @@
-"""Grok accounts API — CRUD, test, and status endpoints."""
+"""Grok accounts API — CRUD, test, status, and bulk import."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from services.grok_provider import grok_provider
 
 class AddAccountRequest(BaseModel):
     api_key: str = ""
+    access_token: str = ""
+    refresh_token: str = ""
     cookies: dict[str, str] | str | None = None
     label: str = ""
     proxy: str = ""
@@ -19,6 +21,8 @@ class AddAccountRequest(BaseModel):
 
 class UpdateAccountRequest(BaseModel):
     api_key: str | None = None
+    access_token: str | None = None
+    refresh_token: str | None = None
     cookies: dict[str, str] | str | None = None
     label: str | None = None
     proxy: str | None = None
@@ -27,8 +31,14 @@ class UpdateAccountRequest(BaseModel):
 
 class TestAccountRequest(BaseModel):
     api_key: str = ""
+    access_token: str = ""
+    refresh_token: str = ""
     cookies: dict[str, str] | str | None = None
     proxy: str = ""
+
+
+class BulkImportRequest(BaseModel):
+    accounts: list[dict]
 
 
 def create_router() -> APIRouter:
@@ -49,27 +59,33 @@ def create_router() -> APIRouter:
         require_admin(authorization)
         try:
             account = grok_account_service.add_account(
-                api_key=body.api_key, cookies=body.cookies, label=body.label, proxy=body.proxy
+                api_key=body.api_key, access_token=body.access_token,
+                refresh_token=body.refresh_token, cookies=body.cookies,
+                label=body.label, proxy=body.proxy,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         return {"account": account, "accounts": grok_account_service.list_accounts()}
+
+    @router.post("/api/grok/import")
+    async def bulk_import(body: BulkImportRequest, authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        added = grok_account_service.add_accounts_bulk(body.accounts)
+        return {"added": added, "accounts": grok_account_service.list_accounts()}
 
     @router.put("/api/grok/accounts/{account_id}")
     async def update_account(account_id: str, body: UpdateAccountRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         updates = {k: v for k, v in body.model_dump().items() if v is not None}
         account = grok_account_service.update_account(account_id, updates)
-        if account is None:
-            raise HTTPException(status_code=404, detail="Account not found")
+        if not account: raise HTTPException(status_code=404, detail="Account not found")
         return {"account": account, "accounts": grok_account_service.list_accounts()}
 
     @router.delete("/api/grok/accounts/{account_id}")
     async def delete_account(account_id: str, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         ok = grok_account_service.delete_account(account_id)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Account not found")
+        if not ok: raise HTTPException(status_code=404, detail="Account not found")
         return {"ok": True, "accounts": grok_account_service.list_accounts()}
 
     @router.post("/api/grok/test")
@@ -78,7 +94,8 @@ def create_router() -> APIRouter:
         from services.grok_account_service import _normalize_cookies
         cookies = _normalize_cookies(body.cookies) if body.cookies else None
         result = grok_provider.test_account(
-            api_key=body.api_key, cookies=cookies, proxy=body.proxy
+            api_key=body.api_key, access_token=body.access_token,
+            refresh_token=body.refresh_token, cookies=cookies, proxy=body.proxy,
         )
         return {"result": result}
 

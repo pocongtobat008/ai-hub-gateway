@@ -1,31 +1,22 @@
-"""Grok provider — supports two auth methods:
+"""Grok provider — supports 3 auth methods:
 
-1. xAI API Key (primary, recommended):
-   - Base URL: https://api.x.ai/v1
-   - OpenAI-compatible API
-   - Free tier available at console.x.ai
+1. xAI API Key (recommended): api.x.ai/v1
+2. Grok CLI OAuth (from vansrouter): cli-chat-proxy.grok.com/v1
+   - Uses refresh_token → access_token flow via auth.x.ai
+   - Auto-refreshes expired tokens
+3. Grok Web Cookies (fallback): grok.com/rest
 
-2. Browser Cookies (fallback):
-   - SSO cookie from grok.com
-   - Requires cf_clearance (Cloudflare challenge) for POST endpoints
-   - Less reliable due to anti-bot protection
-
-Models:
-  grok-3       — Grok-3 (latest)
-  grok-3-mini  — Grok-3 Mini (fast)
-  grok-3-fast  — Grok-3 Fast
-  grok-2       — Grok-2
+Based on vansrouter's grok-cli and grok-web executors.
 """
 
 from __future__ import annotations
 
-import hashlib
+import base64
 import json
 import os
 import random
 import time
 import uuid
-from base64 import b64decode, b64encode
 from typing import Any, Iterator
 
 from services.grok_account_service import grok_account_service
@@ -34,28 +25,49 @@ from services.grok_account_service import grok_account_service
 # ── constants ──────────────────────────────────────────────────────
 
 XAI_API_BASE = "https://api.x.ai/v1"
-GROK_REST_BASE = "https://grok.com/rest"
+GROK_CLI_BASE = "https://cli-chat-proxy.grok.com/v1"
+GROK_CLI_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828"
+GROK_CLI_VERSION = "0.2.99"
+GROK_CLI_USER_AGENT = f"grok-shell/{GROK_CLI_VERSION} (linux; x86_64)"
 
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-]
+GROK_WEB_BASE = "https://grok.com/rest"
 
 MODEL_ALIASES: dict[str, str] = {
     "grok-3": "grok-3",
     "grok-3-latest": "grok-3",
     "grok-3-mini": "grok-3-mini",
+    "grok-3-thinking": "grok-3-thinking",
     "grok-3-fast": "grok-3-fast",
+    "grok-4": "grok-4",
+    "grok-4-mini": "grok-4-mini",
+    "grok-4-thinking": "grok-4-thinking",
+    "grok-4-heavy": "grok-4-heavy",
+    "grok-4.1-mini": "grok-4.1-mini",
+    "grok-4.1-fast": "grok-4.1-fast",
+    "grok-4.1-expert": "grok-4.1-expert",
+    "grok-4.1-thinking": "grok-4.1-thinking",
+    "grok-4.2": "grok-4.2",
+    "grok-4.20": "grok-4.20",
     "grok-2": "grok-2",
     "grok-2-latest": "grok-2",
     "grok-latest": "grok-3",
+    "grok-build": "grok-build",
 }
 
 ALL_GROK_MODELS = [
-    {"id": "grok-3", "name": "Grok-3", "description": "Most capable model"},
-    {"id": "grok-3-mini", "name": "Grok-3 Mini", "description": "Fast and efficient"},
-    {"id": "grok-3-fast", "name": "Grok-3 Fast", "description": "Speed optimized"},
-    {"id": "grok-2", "name": "Grok-2", "description": "Previous generation"},
+    {"id": "grok-3", "name": "Grok 3"},
+    {"id": "grok-3-mini", "name": "Grok 3 Mini (Thinking)"},
+    {"id": "grok-3-thinking", "name": "Grok 3 Thinking"},
+    {"id": "grok-4", "name": "Grok 4"},
+    {"id": "grok-4-mini", "name": "Grok 4 Mini (Thinking)"},
+    {"id": "grok-4-thinking", "name": "Grok 4 Thinking"},
+    {"id": "grok-4-heavy", "name": "Grok 4 Heavy (SuperGrok)"},
+    {"id": "grok-4.1-mini", "name": "Grok 4.1 Mini (Thinking)"},
+    {"id": "grok-4.1-fast", "name": "Grok 4.1 Fast"},
+    {"id": "grok-4.1-expert", "name": "Grok 4.1 Expert"},
+    {"id": "grok-4.1-thinking", "name": "Grok 4.1 Thinking"},
+    {"id": "grok-4.2", "name": "Grok 4.2 (4.20 Beta)"},
+    {"id": "grok-build", "name": "Grok Build (CLI)"},
 ]
 
 
@@ -73,12 +85,10 @@ def resolve_model_name(model: str | None) -> str:
     return MODEL_ALIASES.get(normalized, normalized)
 
 
-# ── xAI API Client (primary method) ──────────────────────────────
+# ── xAI API Client ────────────────────────────────────────────────
 
 
 class XAIClient:
-    """Client for xAI API (api.x.ai/v1) — OpenAI-compatible."""
-
     def __init__(self, api_key: str, proxy: str = "") -> None:
         self._api_key = api_key
         self._proxy = proxy
@@ -102,85 +112,52 @@ class XAIClient:
 
     def close(self) -> None:
         if self._session is not None:
-            try:
-                self._session.close()
-            except Exception:
-                pass
+            try: self._session.close()
+            except: pass
             self._session = None
 
     def chat_stream(self, messages: list[dict], model: str) -> Iterator[str]:
-        """Stream chat response from xAI API. Yields content strings."""
         session = self._get_session()
-        url = f"{XAI_API_BASE}/chat/completions"
-        payload = {
-            "model": model,
-            "messages": messages,
-            "stream": True,
-            "stream_options": {"include_usage": True},
-        }
-        try:
-            with session.stream("POST", url, json=payload) as response:
-                if response.status_code == 200:
-                    for line in response.iter_lines():
-                        if not line or not line.startswith("data: "):
-                            continue
-                        data_str = line[6:].strip()
-                        if data_str == "[DONE]":
-                            return
-                        try:
-                            chunk = json.loads(data_str)
-                            choices = chunk.get("choices") or []
-                            for choice in choices:
-                                delta = choice.get("delta") or {}
-                                content = delta.get("content")
-                                if content:
-                                    yield content
-                        except json.JSONDecodeError:
-                            continue
-                elif response.status_code == 401:
-                    raise RuntimeError("xAI: invalid API key")
-                elif response.status_code == 429:
-                    raise RuntimeError("xAI: rate limit reached")
-                else:
-                    body = response.text[:500]
-                    raise RuntimeError(f"xAI HTTP {response.status_code}: {body}")
-        except Exception as exc:
-            error = str(exc)
-            if "401" in error or "invalid" in error.lower():
-                raise RuntimeError(f"xAI authentication failed: {error}")
-            if "429" in error or "rate" in error.lower():
+        with session.stream("POST", f"{XAI_API_BASE}/chat/completions",
+            json={"model": model, "messages": messages, "stream": True}) as response:
+            if response.status_code == 200:
+                for line in response.iter_lines():
+                    if not line or not line.startswith("data: "): continue
+                    data_str = line[6:].strip()
+                    if data_str == "[DONE]": return
+                    try:
+                        for choice in json.loads(data_str).get("choices") or []:
+                            content = (choice.get("delta") or {}).get("content")
+                            if content: yield content
+                    except: continue
+            elif response.status_code == 401:
+                raise RuntimeError("xAI: invalid API key")
+            elif response.status_code == 429:
                 raise RuntimeError("xAI: rate limit reached")
-            raise
+            else:
+                raise RuntimeError(f"xAI HTTP {response.status_code}: {response.text[:300]}")
 
     def test(self) -> dict[str, Any]:
-        """Test if the API key is valid."""
         session = self._get_session()
         try:
             resp = session.get(f"{XAI_API_BASE}/models")
             if resp.status_code == 200:
-                data = resp.json()
-                models = [m.get("id", "") for m in data.get("data", [])]
+                models = [m.get("id","") for m in resp.json().get("data",[])]
                 return {"ok": True, "models": models}
-            elif resp.status_code == 401:
-                return {"ok": False, "error": "Invalid API key"}
-            else:
-                return {"ok": False, "error": f"xAI returned HTTP {resp.status_code}"}
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
+            return {"ok": False, "error": f"xAI HTTP {resp.status_code}"}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
 
-# ── Cookie Client (fallback method) ──────────────────────────────
+# ── Grok CLI Client (OAuth token refresh) ─────────────────────────
 
 
-class GrokCookieClient:
-    """Client for Grok web API using browser cookies (fallback)."""
+class GrokCLIClient:
+    """Client for Grok CLI (cli-chat-proxy.grok.com) using OAuth tokens."""
 
-    _META_BASE64 = "n3ZIx7mlK0v5tXOOwnOW0kx919Tg8EB66MmUtAeyFyZjNZVZ3P+DYM+SHCIrOoxZ"
-    _FINGERPRINT = "09100b5c28f5c28f5c0b5c28f5c28f5c0b5c28f5c28f5c0b5c28f5c28f5c00"
-    _EPOCH_OFFSET = 0x644F6370
-
-    def __init__(self, cookies: dict[str, str], proxy: str = "") -> None:
-        self._cookies = cookies
+    def __init__(self, access_token: str, refresh_token: str, proxy: str = "") -> None:
+        self._access_token = access_token
+        self._refresh_token = refresh_token
         self._proxy = proxy
         self._session = None
 
@@ -190,195 +167,153 @@ class GrokCookieClient:
             kwargs: dict[str, Any] = {
                 "impersonate": "chrome131",
                 "timeout": 120,
-                "headers": self._build_headers(),
+                "headers": {
+                    "Authorization": f"Bearer {self._access_token}",
+                    "Content-Type": "application/json",
+                    "User-Agent": GROK_CLI_USER_AGENT,
+                    "x-grok-client-identifier": "grok-shell",
+                    "x-grok-client-version": GROK_CLI_VERSION,
+                },
             }
             if self._proxy:
                 kwargs["proxy"] = self._proxy
             self._session = requests.Session(**kwargs)
         return self._session
 
-    def _cookie_string(self) -> str:
-        return "; ".join(f"{k}={v}" for k, v in sorted(self._cookies.items()))
-
-    def _make_statsig_id(self, path: str, method: str = "POST") -> str:
-        meta_bytes = b64decode(self._META_BASE64)
-        relative_seconds = int(max(0, time.time() - self._EPOCH_OFFSET))
-        message = f"{method}!{path}!{relative_seconds}obfiowerehiring{self._FINGERPRINT}"
-        digest = hashlib.sha256(message.encode("utf-8")).digest()
-        raw = bytearray()
-        random_byte = os.urandom(1)[0]
-        raw.append(random_byte)
-        raw.extend(meta_bytes)
-        raw.append(relative_seconds & 0xFF)
-        raw.append((relative_seconds >> 8) & 0xFF)
-        raw.append((relative_seconds >> 16) & 0xFF)
-        raw.append((relative_seconds >> 24) & 0xFF)
-        raw.extend(digest[:16])
-        raw.append(3)
-        for i in range(1, len(raw)):
-            raw[i] ^= random_byte
-        return b64encode(bytes(raw)).decode("ascii").rstrip("=")
-
-    def _build_headers(self) -> dict[str, str]:
-        return {
-            "accept": "*/*",
-            "accept-language": "en-US,en;q=0.9",
-            "content-type": "application/json",
-            "origin": "https://grok.com",
-            "referer": "https://grok.com/",
-            "sec-ch-ua": '"Chromium";v="151", "Google Chrome";v="151", "Not)A)Brand";v="99"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Linux"',
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-origin",
-            "user-agent": random.choice(USER_AGENTS),
-        }
+    def _refresh_access_token(self) -> str:
+        """Refresh the access token using the refresh token."""
+        from curl_cffi import requests
+        resp = requests.post(
+            "https://auth.x.ai/oauth2/token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": self._refresh_token,
+                "client_id": GROK_CLI_CLIENT_ID,
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"Token refresh failed: HTTP {resp.status_code}")
+        data = resp.json()
+        new_access = data.get("access_token", "")
+        new_refresh = data.get("refresh_token", "")
+        if not new_access:
+            raise RuntimeError(f"Token refresh failed: {data.get('error', 'no access_token')}")
+        self._access_token = new_access
+        if new_refresh:
+            self._refresh_token = new_refresh
+        # Update session headers
+        if self._session:
+            self._session.headers["Authorization"] = f"Bearer {new_access}"
+        return new_access
 
     def close(self) -> None:
         if self._session is not None:
-            try:
-                self._session.close()
-            except Exception:
-                pass
+            try: self._session.close()
+            except: pass
             self._session = None
 
-    def chat_stream(self, message: str, model: str) -> Iterator[str]:
-        """Stream chat response from Grok web API."""
+    def get_tokens(self) -> tuple[str, str]:
+        return self._access_token, self._refresh_token
+
+    def chat_stream(self, messages: list[dict], model: str) -> Iterator[str]:
         session = self._get_session()
-        path = "/app-chat/conversations/new"
-        url = f"{GROK_REST_BASE}{path}"
-        headers = self._build_headers()
-        headers["cookie"] = self._cookie_string()
-        headers["x-xai-request-id"] = str(uuid.uuid4()).lower()
-        headers["x-statsig-id"] = self._make_statsig_id(path, "POST")
-
-        payload = {
-            "temporary": False,
-            "message": message,
-            "model": model,
-            "modeId": "default",
-            "imageAttachments": [],
-            "fileAttachments": [],
-            "disableSearch": False,
-            "enableImageGeneration": True,
-            "returnImageBytes": False,
-            "returnRawGrokInXaiRequest": False,
-            "enableImageStreaming": True,
-            "imageGenerationCount": 2,
-            "forceConcise": False,
-            "enableSideBySide": True,
-            "sendFinalMetadata": True,
-            "disableTextFollowUps": False,
-            "responseMetadata": {},
-            "disableMemory": False,
-            "forceSideBySide": False,
-            "isAsyncChat": False,
-            "disableSelfHarmShortCircuit": False,
-            "collectionIds": [],
-            "disabledConnectorIds": [],
-            "linkQuery": False,
-            "deviceEnvInfo": {
-                "darkModeEnabled": True,
-                "devicePixelRatio": 2,
-                "screenWidth": 1920,
-                "screenHeight": 1080,
-                "viewportWidth": 1920,
-                "viewportHeight": 900,
-            },
-        }
-
+        payload = {"model": model, "messages": messages, "stream": True}
         try:
-            with session.stream("POST", url, headers=headers, json=payload) as response:
+            with session.stream("POST", f"{GROK_CLI_BASE}/chat/completions", json=payload) as response:
                 if response.status_code == 200:
                     for line in response.iter_lines():
-                        if not line:
-                            continue
+                        if not line or not line.startswith("data: "): continue
+                        data_str = line[6:].strip()
+                        if data_str == "[DONE]": return
                         try:
-                            obj = json.loads(line)
-                            token = obj.get("result", {}).get("response", {}).get("token")
-                            if token:
-                                yield token
-                        except json.JSONDecodeError:
-                            continue
+                            for choice in json.loads(data_str).get("choices") or []:
+                                content = (choice.get("delta") or {}).get("content")
+                                if content: yield content
+                        except: continue
                 elif response.status_code == 401:
-                    raise RuntimeError("Grok: authentication failed (cookie expired)")
-                elif response.status_code == 403:
-                    raise RuntimeError("Grok: access denied (403) — cookies may need cf_clearance")
-                elif response.status_code == 429:
-                    raise RuntimeError("Grok: rate limit reached")
+                    # Token expired — try refresh
+                    try:
+                        self._refresh_access_token()
+                        # Retry with new token
+                        with self._get_session().stream("POST", f"{GROK_CLI_BASE}/chat/completions", json=payload) as retry:
+                            if retry.status_code == 200:
+                                for line in retry.iter_lines():
+                                    if not line or not line.startswith("data: "): continue
+                                    data_str = line[6:].strip()
+                                    if data_str == "[DONE]": return
+                                    try:
+                                        for choice in json.loads(data_str).get("choices") or []:
+                                            content = (choice.get("delta") or {}).get("content")
+                                            if content: yield content
+                                    except: continue
+                            else:
+                                raise RuntimeError(f"Grok CLI auth failed after refresh: HTTP {retry.status_code}")
+                    except RuntimeError:
+                        raise
+                    except Exception as e:
+                        raise RuntimeError(f"Grok CLI refresh failed: {e}")
+                elif response.status_code == 402:
+                    raise RuntimeError("Grok CLI: out of credits")
                 else:
-                    body = response.text[:500]
-                    raise RuntimeError(f"Grok HTTP {response.status_code}: {body}")
-        except Exception as exc:
-            error = str(exc)
-            if "401" in error or "authentication" in error.lower():
-                raise RuntimeError(f"Grok authentication failed: {error}")
-            if "429" in error or "rate" in error.lower():
-                raise RuntimeError("Grok: rate limit reached")
-            if "403" in error:
-                raise RuntimeError(f"Grok access denied: {error}")
+                    raise RuntimeError(f"Grok CLI HTTP {response.status_code}")
+        except RuntimeError:
             raise
+        except Exception as e:
+            raise RuntimeError(f"Grok CLI error: {e}")
 
     def test(self) -> dict[str, Any]:
-        """Test if the cookies are valid."""
         session = self._get_session()
         try:
-            path = "/user-settings"
-            url = f"{GROK_REST_BASE}{path}"
-            headers = self._build_headers()
-            headers["cookie"] = self._cookie_string()
-            resp = session.get(url, headers=headers)
+            resp = session.get(f"{GROK_CLI_BASE}/models")
             if resp.status_code == 200:
-                return {"ok": True, "name": "Grok User"}
+                return {"ok": True}
             elif resp.status_code == 401:
-                return {"ok": False, "error": "Cookies expired or invalid"}
+                try:
+                    self._refresh_access_token()
+                    return {"ok": True, "refreshed": True}
+                except:
+                    return {"ok": False, "error": "Token expired and refresh failed"}
             else:
-                return {"ok": False, "error": f"Grok returned HTTP {resp.status_code}"}
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
+                return {"ok": False, "error": f"HTTP {resp.status_code}"}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
 
 # ── Provider ───────────────────────────────────────────────────────
 
 
 class GrokProvider:
-    """High-level provider: account pool + chat/chat_stream + models."""
-
     def __init__(self) -> None:
         self._clients: dict[str, Any] = {}
 
-    def _client_for(self, account: dict) -> XAIClient | GrokCookieClient:
+    def _client_for(self, account: dict) -> XAIClient | GrokCLIClient:
         account_id = str(account.get("id") or "")
         client = self._clients.get(account_id)
-
-        # Check if proxy changed
         if client is not None and (getattr(client, "_proxy", "") or "") != str(account.get("proxy") or ""):
             client.close()
             client = None
             self._clients.pop(account_id, None)
-
         if client is None:
-            # Prefer API key if available
             api_key = str(account.get("api_key") or "").strip()
+            access_token = str(account.get("access_token") or "").strip()
+            refresh_token = str(account.get("refresh_token") or "").strip()
             if api_key:
                 client = XAIClient(api_key=api_key, proxy=str(account.get("proxy") or ""))
+            elif access_token and refresh_token:
+                client = GrokCLIClient(
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    proxy=str(account.get("proxy") or ""),
+                )
             else:
-                cookies = account.get("cookies") or {}
-                if isinstance(cookies, str):
-                    cookies = dict(
-                        part.split("=", 1)
-                        for part in cookies.split(";")
-                        if "=" in part
-                    )
-                client = GrokCookieClient(cookies=cookies, proxy=str(account.get("proxy") or ""))
+                raise RuntimeError("Account has no API key or OAuth tokens")
             self._clients[account_id] = client
         return client
 
     def _close_client(self, account_id: str) -> None:
         client = self._clients.pop(account_id, None)
-        if client is not None:
-            client.close()
+        if client: client.close()
 
     def is_configured(self) -> bool:
         return bool(grok_account_service.list_accounts())
@@ -391,43 +326,23 @@ class GrokProvider:
 
     def _pick_account(self, prefer_id: str | None = None) -> dict | None:
         picked = grok_account_service.pick_account(prefer_id=prefer_id)
-        if picked is None:
-            return None
+        if not picked: return None
         creds = grok_account_service.get_credentials(str(picked.get("id") or ""))
-        if creds is None:
-            return None
+        if not creds: return None
         return {**picked, **creds}
 
-    # ── test ──────────────────────────────────────────────────────
-
-    def test_account(self, api_key: str = "", cookies: dict[str, str] | None = None, proxy: str = "") -> dict[str, Any]:
+    def test_account(self, **kwargs) -> dict[str, Any]:
+        api_key = kwargs.get("api_key", "")
+        access_token = kwargs.get("access_token", "")
+        refresh_token = kwargs.get("refresh_token", "")
+        proxy = kwargs.get("proxy", "")
         if api_key:
-            client = XAIClient(api_key=api_key, proxy=proxy)
-        elif cookies:
-            client = GrokCookieClient(cookies=cookies, proxy=proxy)
-        else:
-            return {"ok": False, "error": "No API key or cookies provided"}
-        try:
-            return client.test()
-        finally:
-            client.close()
+            return XAIClient(api_key=api_key, proxy=proxy).test()
+        elif access_token and refresh_token:
+            return GrokCLIClient(access_token=access_token, refresh_token=refresh_token, proxy=proxy).test()
+        return {"ok": False, "error": "No credentials provided"}
 
-    # ── chat ──────────────────────────────────────────────────────
-
-    def _chat_once_xai(self, client: XAIClient, message: str, model: str) -> Iterator[str]:
-        messages = [{"role": "user", "content": message}]
-        yield from client.chat_stream(messages, model)
-
-    def _chat_once_cookie(self, client: GrokCookieClient, message: str, model: str) -> Iterator[str]:
-        yield from client.chat_stream(message, model)
-
-    def chat_stream(
-        self,
-        message: str,
-        model: str,
-        account_id: str | None = None,
-    ) -> Iterator[dict[str, Any]]:
-        """Stream chat response with automatic failover across accounts."""
+    def chat_stream(self, message: str, model: str, account_id: str | None = None) -> Iterator[dict[str, Any]]:
         model_name = resolve_model_name(model)
         last_error: Exception | None = None
         tried: set[str] = set()
@@ -436,37 +351,38 @@ class GrokProvider:
         total_accounts = len(grok_account_service.list_accounts()) or 1
         for _ in range(total_accounts):
             account = self._pick_account(prefer_id=account_id)
-            if account is None:
-                break
+            if not account: break
             account_key = str(account.get("id") or "")
-            if account_key in tried:
-                continue
+            if account_key in tried: continue
             tried.add(account_key)
-            if account_id and account_key != account_id:
-                raise RuntimeError("Requested Grok account is not available")
 
             client = self._client_for(account)
             try:
-                if isinstance(client, XAIClient):
-                    for token in self._chat_once_xai(client, message, model_name):
-                        got_content = True
-                        yield {"kind": "delta", "text": token}
-                else:
-                    for token in self._chat_once_cookie(client, message, model_name):
-                        got_content = True
-                        yield {"kind": "delta", "text": token}
+                messages = [{"role": "user", "content": message}]
+                for token in client.chat_stream(messages, model_name):
+                    got_content = True
+                    yield {"kind": "delta", "text": token}
+                # Save refreshed tokens if client was refreshed
+                if isinstance(client, GrokCLIClient):
+                    new_access, new_refresh = client.get_tokens()
+                    grok_account_service.update_account(account_key, {
+                        "access_token": new_access,
+                        "refresh_token": new_refresh,
+                    })
             except RuntimeError as exc:
                 last_error = exc
                 error_lower = str(exc).lower()
-                if any(tok in error_lower for tok in ("401", "expired", "invalid", "auth")):
+                if any(t in error_lower for t in ("401", "expired", "invalid", "auth")):
                     grok_account_service.mark_used(account_key, ok=False, error=str(exc))
                     self._close_client(account_key)
-                elif any(tok in error_lower for tok in ("rate limit", "429", "too many")):
+                elif any(t in error_lower for t in ("rate limit", "429", "too many")):
+                    grok_account_service.mark_used(account_key, ok=False, error=str(exc))
+                elif "credits" in error_lower or "402" in error_lower:
                     grok_account_service.mark_used(account_key, ok=False, error=str(exc))
                 continue
 
             if not got_content:
-                last_error = RuntimeError("Grok returned an empty response")
+                last_error = RuntimeError("Grok returned empty response")
                 grok_account_service.mark_used(account_key, ok=False, error=str(last_error))
                 continue
 
@@ -474,36 +390,17 @@ class GrokProvider:
             yield {"kind": "done", "finish_reason": "stop"}
             return
 
-        if last_error is not None:
-            raise RuntimeError(f"All Grok accounts failed: {last_error}")
+        if last_error: raise RuntimeError(f"All Grok accounts failed: {last_error}")
         raise RuntimeError("No available Grok account")
 
-    def chat(
-        self,
-        message: str,
-        model: str,
-        account_id: str | None = None,
-    ) -> dict[str, Any]:
-        """Non-streaming chat (collect all deltas)."""
+    def chat(self, message: str, model: str, account_id: str | None = None) -> dict[str, Any]:
         text: list[str] = []
         for item in self.chat_stream(message, model, account_id=account_id):
-            kind = item.get("kind")
-            if kind == "delta":
-                text.append(str(item.get("text") or ""))
+            if item.get("kind") == "delta": text.append(str(item.get("text") or ""))
         return {"text": "".join(text), "finish_reason": "stop"}
 
-    # ── models ────────────────────────────────────────────────────
-
     def list_models(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "id": m["id"],
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "xai",
-            }
-            for m in ALL_GROK_MODELS
-        ]
+        return [{"id": m["id"], "object": "model", "created": int(time.time()), "owned_by": "xai"} for m in ALL_GROK_MODELS]
 
 
 grok_provider = GrokProvider()
