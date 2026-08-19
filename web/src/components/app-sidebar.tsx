@@ -9,6 +9,7 @@ import {
   Clapperboard,
   Cog,
   FileJson,
+  Film,
   Gem,
   Image,
   LogOut,
@@ -37,6 +38,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType };
 const mainNav: NavItem[] = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/image", label: "Image Gen", icon: Image },
+  { href: "/storyboard", label: "Storyboard", icon: Film },
   { href: "/gemini", label: "Gemini", icon: Sparkles },
 ];
 
