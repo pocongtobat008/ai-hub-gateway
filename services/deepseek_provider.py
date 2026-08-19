@@ -349,6 +349,7 @@ def _parse_envelope(data: Any) -> Any:
     return inner.get("biz_data")
 
 
+
 class DeepSeekClient:
     """Raw HTTP client for the DeepSeek web API."""
 
@@ -557,18 +558,42 @@ class DeepSeekClient:
         buf = b""
         pending_events: list[dict[str, Any]] = []
         first_two: list[str] = []
+        first_chunk = True
 
         for chunk in resp.iter_content(chunk_size=4096):
             if not chunk:
                 continue
             buf += chunk
+
+            # Detect non-SSE JSON error on the very first chunk.
+            # When the account is muted (biz_code=5) the server returns a
+            # single JSON object instead of SSE frames.
+            if first_chunk:
+                first_chunk = False
+                try:
+                    text = buf.decode("utf-8", errors="replace").strip()
+                    if text.startswith("{"):
+                        data = json.loads(text)
+                        inner = data.get("data") if isinstance(data, dict) else None
+                        biz_code = inner.get("biz_code") if isinstance(inner, dict) else None
+                        biz_msg = (inner.get("biz_msg") or "") if isinstance(inner, dict) else ""
+                        if biz_code == 5 or (biz_msg and "muted" in str(biz_msg).lower()):
+                            mute_until = ((inner.get("biz_data") or {}).get("mute_until", 0)) if isinstance(inner, dict) else 0
+                            raise RuntimeError(
+                                f"DeepSeek account muted: {biz_msg}"
+                                f" (mute_until={mute_until})"
+                            )
+                        if biz_code and biz_code != 0:
+                            raise RuntimeError(f"DeepSeek error: biz_code={biz_code}, {biz_msg}")
+                except (json.JSONDecodeError, ValueError):
+                    pass  # Not JSON, continue with normal SSE parsing
+
             while b"\n\n" in buf:
                 raw, buf = buf.split(b"\n\n", 1)
                 frame = raw.decode("utf-8", errors="replace")
                 if len(first_two) < 2:
                     first_two.append(frame)
                     if len(first_two) == 2:
-                        # Check the hint event in the second frame
                         hint_err = _check_hint(frame)
                         if hint_err:
                             raise RuntimeError(hint_err)
@@ -589,9 +614,26 @@ class DeepSeekClient:
                     yield evt
                 pending_events = []
 
-        # Trailing buffer
+        # Trailing buffer — may contain a JSON error too
         if buf:
             frame = buf.decode("utf-8", errors="replace")
+            stripped = frame.strip()
+            if stripped.startswith("{"):
+                try:
+                    data = json.loads(stripped)
+                    inner = data.get("data") if isinstance(data, dict) else None
+                    biz_code = inner.get("biz_code") if isinstance(inner, dict) else None
+                    biz_msg = (inner.get("biz_msg") or "") if isinstance(inner, dict) else ""
+                    if biz_code == 5 or (biz_msg and "muted" in str(biz_msg).lower()):
+                        mute_until = ((inner.get("biz_data") or {}).get("mute_until", 0)) if isinstance(inner, dict) else 0
+                        raise RuntimeError(
+                            f"DeepSeek account muted: {biz_msg}"
+                            f" (mute_until={mute_until})"
+                        )
+                    if biz_code and biz_code != 0:
+                        raise RuntimeError(f"DeepSeek error: biz_code={biz_code}, {biz_msg}")
+                except (json.JSONDecodeError, ValueError):
+                    pass
             try:
                 events = state.apply_frame(frame)
             except RuntimeError:
@@ -1162,11 +1204,24 @@ class DeepSeekProvider:
                     yield event
             except RuntimeError as exc:
                 last_error = exc
+                error_lower = str(exc).lower()
                 if emitted:
                     # Failure mid-stream: do not retry (would duplicate output).
                     raise
-                # _chat_once already marked the account unhealthy;
-                # loop and pick the next healthy account.
+                # Mark account as unhealthy; handle specific error types
+                error_msg = str(exc)
+                if any(tok in error_lower for tok in ("muted", "banned", "restricted")):
+                    deepseek_account_service.mark_used(account_key, ok=False, error=error_msg)
+                    self._invalidate_token(account_key)
+                    self._close_client(account_key)
+                elif any(tok in error_lower for tok in ("rate limit", "429", "too many")):
+                    deepseek_account_service.mark_used(account_key, ok=False, error=error_msg)
+                elif any(tok in error_lower for tok in ("401", "unauthorized", "invalid credentials",
+                                                        "wrong password", "not logged in", "login expired")):
+                    deepseek_account_service.mark_used(account_key, ok=False, error=error_msg)
+                    self._invalidate_token(account_key)
+                    self._close_client(account_key)
+                # Loop and pick the next healthy account.
                 continue
             if not got_content:
                 # The upstream returned zero content (e.g. a dead account that
