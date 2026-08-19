@@ -171,7 +171,7 @@ function GrokAccountsContent() {
   const handleTest = async (account: GrokAccount) => {
     setTestingId(account.id);
     try {
-      const data = await testGrok({ api_key: "", cookies: account.cookies || "" });
+      const data = await testGrok({ account_id: account.id });
       if (data.result.ok) {
         toast.success(`Account works! ${data.result.models ? `Models: ${data.result.models.join(", ")}` : data.result.name || "OK"}`);
       } else {

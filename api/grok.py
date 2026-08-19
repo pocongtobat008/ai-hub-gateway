@@ -30,6 +30,7 @@ class UpdateAccountRequest(BaseModel):
 
 
 class TestAccountRequest(BaseModel):
+    account_id: str = ""
     api_key: str = ""
     access_token: str = ""
     refresh_token: str = ""
@@ -91,11 +92,26 @@ def create_router() -> APIRouter:
     @router.post("/api/grok/test")
     async def test_account(body: TestAccountRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)
+        # If account_id provided, look up credentials from account service
+        api_key = body.api_key
+        access_token = body.access_token
+        refresh_token = body.refresh_token
+        proxy = body.proxy
+        cookies = body.cookies
+        if body.account_id:
+            creds = grok_account_service.get_credentials(body.account_id)
+            if not creds:
+                raise HTTPException(status_code=404, detail="Account not found")
+            api_key = creds.get('api_key', '') or api_key
+            access_token = creds.get('access_token', '') or access_token
+            refresh_token = creds.get('refresh_token', '') or refresh_token
+            proxy = creds.get('proxy', '') or proxy
+            cookies = creds.get('cookies', None) or cookies
         from services.grok_account_service import _normalize_cookies
-        cookies = _normalize_cookies(body.cookies) if body.cookies else None
+        cookies_norm = _normalize_cookies(cookies) if cookies else None
         result = grok_provider.test_account(
-            api_key=body.api_key, access_token=body.access_token,
-            refresh_token=body.refresh_token, cookies=cookies, proxy=body.proxy,
+            api_key=api_key, access_token=access_token,
+            refresh_token=refresh_token, cookies=cookies_norm, proxy=proxy,
         )
         return {"result": result}
 

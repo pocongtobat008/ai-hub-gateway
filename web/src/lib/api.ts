@@ -734,7 +734,7 @@ export async function fetchGrokStatus() {
   return httpRequest<{ result: GrokStatus }>("/api/grok/status");
 }
 
-export async function testGrok(input: { sso: string; proxy?: string }) {
+export async function testGrok(input: { account_id?: string; api_key?: string; access_token?: string; refresh_token?: string; cookies?: Record<string, string> | string; proxy?: string }) {
   return httpRequest<{ result: { ok: boolean; error: string; name?: string } }>("/api/grok/test", {
     method: "POST",
     body: input,
