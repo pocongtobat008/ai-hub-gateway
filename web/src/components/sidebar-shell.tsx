@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, PanelLeft } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -151,6 +151,19 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
           onRenameConversation={c.onRenameConversation}
           formatConversationTime={c.formatConversationTime}
         />
+
+        {/* Global mobile hamburger button — visible on ALL pages */}
+        {!mobileOpen && (
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="fixed top-3 left-3 z-50 lg:hidden inline-flex size-10 items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-stone-200/60 text-stone-600 transition-all duration-200 active:scale-95 dark:bg-stone-900/90 dark:border-white/10 dark:text-stone-300"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            title="Open menu"
+          >
+            <PanelLeft className="size-4" />
+          </button>
+        )}
 
         <main
           className="flex-1 min-w-0 transition-all duration-300"
