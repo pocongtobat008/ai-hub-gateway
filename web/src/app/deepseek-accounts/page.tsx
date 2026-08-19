@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, LoaderCircle, Pencil, Plus, PlugZap, Trash2 } from "lucide-react";
+import { Bot, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
   deleteDeepSeekAccount,
   fetchDeepSeekAccounts,
   testDeepSeek,
+  testAllDeepSeek,
+  resetDeepSeekAccounts,
   updateDeepSeekAccount,
   type DeepSeekAccount,
 } from "@/lib/api";
@@ -55,6 +57,8 @@ function DeepSeekAccountsContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<DeepSeekAccount | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const didLoadRef = useRef(false);
 
   const loadAccounts = useCallback(async (silent = false) => {
@@ -176,6 +180,37 @@ function DeepSeekAccountsContent() {
 
   const usableCount = accounts.filter((account) => account.status === "normal").length;
 
+  const handleRefreshAll = async () => {
+    setIsRefreshingAll(true);
+    try {
+      toast.info("Testing all DeepSeek accounts...");
+      const data = await testAllDeepSeek();
+      setAccounts(data.accounts);
+      if (data.fail > 0) {
+        toast.warning(`Refreshed: ${data.ok} OK, ${data.fail} failed (out of ${data.total})`);
+      } else {
+        toast.success(`All ${data.ok} DeepSeek accounts OK!`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      setIsRefreshingAll(false);
+    }
+  };
+
+  const handleResetAll = async () => {
+    setIsResetting(true);
+    try {
+      const data = await resetDeepSeekAccounts();
+      setAccounts(data.accounts);
+      toast.success("All DeepSeek accounts reset to normal");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Reset failed");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <section className="mx-auto w-full max-w-[1200px] px-3 pt-2 pb-10 sm:px-6 sm:pt-4">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -191,10 +226,30 @@ function DeepSeekAccountsContent() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
             {usableCount}/{accounts.length} usable
           </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleRefreshAll()}
+            disabled={isRefreshingAll || isResetting || accounts.length === 0}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`size-4 ${isRefreshingAll ? "animate-spin" : ""}`} />
+            Refresh All
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleResetAll()}
+            disabled={isRefreshingAll || isResetting}
+            className="gap-1.5"
+          >
+            <RotateCcw className={`size-4 ${isResetting ? "animate-spin" : ""}`} />
+            Reset All
+          </Button>
           <Button className="h-9 rounded-full bg-stone-950 px-4 text-white hover:bg-stone-800" onClick={openAdd}>
             <Plus className="mr-1.5 size-3.5" />
             Add account

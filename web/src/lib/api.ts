@@ -692,6 +692,14 @@ export async function testDeepSeek(input: { accountId?: string; email?: string; 
   });
 }
 
+export async function testAllDeepSeek() {
+  return httpRequest<{ total: number; ok: number; fail: number; accounts: DeepSeekAccount[] }>("/api/deepseek/test-all", { method: "POST" });
+}
+
+export async function resetDeepSeekAccounts() {
+  return httpRequest<{ ok: boolean; accounts: DeepSeekAccount[] }>("/api/deepseek/reset", { method: "POST" });
+}
+
 export async function fetchDeepSeekAccounts() {
   return httpRequest<{ accounts: DeepSeekAccount[] }>("/api/deepseek/accounts");
 }
@@ -794,6 +802,14 @@ export async function testGemini(accountId?: string) {
     method: "POST",
     body: accountId ? { account_id: accountId } : {},
   });
+}
+
+export async function testAllGemini() {
+  return httpRequest<{ total: number; ok: number; fail: number; accounts: GeminiAccount[] }>("/api/gemini/test-all", { method: "POST" });
+}
+
+export async function resetGeminiAccounts() {
+  return httpRequest<{ ok: boolean; accounts: GeminiAccount[] }>("/api/gemini/reset", { method: "POST" });
 }
 
 export async function fetchGeminiAccounts() {

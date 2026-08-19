@@ -136,4 +136,53 @@ def create_router() -> APIRouter:
             result = {"ok": False, "error": str(exc)}
         return {"result": result}
 
+    @router.post("/api/deepseek/test-all")
+    async def test_all_accounts(authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        accounts = deepseek_account_service.list_accounts()
+        ok_count = 0
+        fail_count = 0
+        for acc in accounts:
+            acc_id = acc.get("id", "")
+            creds = deepseek_account_service.get_credentials(acc_id)
+            if not creds:
+                fail_count += 1
+                continue
+            try:
+                result = await run_in_threadpool(
+                    deepseek_provider.test_account,
+                    creds["email"], creds["password"], creds.get("proxy") or "",
+                )
+                if result.get("ok"):
+                    ok_count += 1
+                    deepseek_account_service.mark_used(acc_id, ok=True)
+                else:
+                    fail_count += 1
+                    deepseek_account_service.mark_used(acc_id, ok=False, error=result.get("error", "test failed"))
+            except Exception:
+                fail_count += 1
+        return {"total": len(accounts), "ok": ok_count, "fail": fail_count, "accounts": deepseek_account_service.list_accounts()}
+
+    @router.post("/api/deepseek/reset")
+    async def reset_all_accounts(authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        accounts = deepseek_account_service.list_accounts()
+        for acc in accounts:
+            deepseek_account_service.update_account(acc["id"], {"status": "normal"})
+        # Clear raw file errors
+        import json
+        store = deepseek_account_service._store_file
+        if store.exists():
+            data = json.loads(store.read_text(encoding="utf-8"))
+            items = data.get("accounts", []) if isinstance(data, dict) else data
+            for item in items:
+                item["status"] = "normal"
+                item["last_error"] = None
+                item["last_error_at"] = None
+                item["fail"] = 0
+                item["invalid_count"] = 0
+                item["restore_at"] = None
+            store.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return {"ok": True, "accounts": deepseek_account_service.list_accounts()}
+
     return router
