@@ -467,121 +467,124 @@ export function AppSidebar({
         </div>
       )}
 
-      {/* Main navigation */}
-      <nav className={cn("shrink-0 space-y-0.5 stagger-children", collapsed ? "px-2 pt-2" : "px-3 pt-2")}>
-        {mainNav.map((item, i) => (
-          <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
-        ))}
-      </nav>
-
-      {/* Account management links */}
-      {!collapsed && (
-        <nav className="shrink-0 space-y-0.5 px-3 pt-3 stagger-children">
-          <div className="mb-1 px-2 text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500 animate-fade-in">
-            Accounts
-          </div>
-          {accountNav.map((item, i) => (
+      {/* SCROLLABLE MIDDLE: nav + accounts + history — all scroll together */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300/40 dark:[&::-webkit-scrollbar-thumb]:bg-stone-600/40">
+        {/* Main navigation */}
+        <nav className={cn("space-y-0.5", collapsed ? "px-2 pt-2" : "px-3 pt-2")}>
+          {mainNav.map((item, i) => (
             <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
           ))}
         </nav>
-      )}
 
-      {/* System links (collapsed only) */}
-      {collapsed && (
-        <nav className="shrink-0 space-y-0.5 px-2 pt-3 stagger-children">
-          {[...accountNav, ...systemNav].map((item, i) => (
-            <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
-          ))}
-        </nav>
-      )}
-
-      {/* System links */}
-      {!collapsed && (
-        <nav className="shrink-0 space-y-0.5 px-3 pt-3 stagger-children">
-          <div className="mb-1 px-2 text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500 animate-fade-in">
-            System
-          </div>
-          {systemNav.map((item, i) => (
-            <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
-          ))}
-        </nav>
-      )}
-
-      {/* Conversation History */}
-      <div className="flex-1 min-h-0 overflow-hidden px-3 pt-2 flex flex-col">
+        {/* Account management links */}
         {!collapsed && (
-          <>
-            <div className="mb-1.5 flex items-center justify-between px-1 animate-fade-in">
-              <span className="text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
-                History
-              </span>
-              {conversations.length > 0 && (
-                <span className="text-[10px] text-stone-300 dark:text-stone-600">
-                  {conversations.length}
-                </span>
-              )}
+          <nav className="space-y-0.5 px-3 pt-3">
+            <div className="mb-1 px-2 text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
+              Accounts
             </div>
-            {/* Search box for mobile */}
-            {conversations.length > 3 && (
-              <div className="mb-2 animate-fade-in">
-                <HistorySearch conversations={conversations} onSelect={(id) => {
-                  onSelectConversation?.(id);
-                  onMobileOpenChange(false);
-                }} formatTime={formatTime} />
-              </div>
-            )}
-            <div className="flex-1 min-h-0 space-y-0.5 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300/50 dark:[&::-webkit-scrollbar-thumb]:bg-stone-600/50">
-              {conversations.length === 0 ? (
-                <div className="px-1 py-6 text-center animate-fade-in">
-                  <MessageSquare className="mx-auto mb-2 size-6 text-stone-300 dark:text-stone-600" />
-                  <div className="text-[11px] text-stone-400 dark:text-stone-500">
-                    No chats yet
-                  </div>
-                  <div className="mt-1 text-[10px] text-stone-300 dark:text-stone-600">
-                    Start a conversation
-                  </div>
-                </div>
-              ) : (
-                conversations.slice(0, 50).map((conv, i) => (
-                  <ConversationItem
-                    key={conv.id}
-                    conversation={conv}
-                    selected={conv.id === selectedConversationId}
-                    collapsed={false}
-                    onSelect={(id) => {
-                      onSelectConversation?.(id);
-                      onMobileOpenChange(false);
-                    }}
-                    onDelete={onDeleteConversation || (() => {})}
-                    onRename={onRenameConversation || (() => {})}
-                    formatTime={formatTime}
-                    index={i}
-                  />
-                ))
-              )}
-            </div>
-          </>
-        )}
-        {collapsed && (
-          <div className="space-y-0.5 pt-1 stagger-children">
-            {conversations.slice(0, 10).map((conv, i) => (
-              <ConversationItem
-                key={conv.id}
-                conversation={conv}
-                selected={conv.id === selectedConversationId}
-                collapsed={true}
-                onSelect={(id) => {
-                  onSelectConversation?.(id);
-                  onMobileOpenChange(false);
-                }}
-                onDelete={onDeleteConversation || (() => {})}
-                onRename={onRenameConversation || (() => {})}
-                formatTime={formatTime}
-                index={i}
-              />
+            {accountNav.map((item, i) => (
+              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
             ))}
-          </div>
+          </nav>
         )}
+
+        {/* System links (collapsed only) */}
+        {collapsed && (
+          <nav className="space-y-0.5 px-2 pt-3">
+            {[...accountNav, ...systemNav].map((item, i) => (
+              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
+            ))}
+          </nav>
+        )}
+
+        {/* System links */}
+        {!collapsed && (
+          <nav className="space-y-0.5 px-3 pt-3">
+            <div className="mb-1 px-2 text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
+              System
+            </div>
+            {systemNav.map((item, i) => (
+              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
+            ))}
+          </nav>
+        )}
+
+        {/* Conversation History */}
+        <div className="px-3 pt-3 pb-2 flex flex-col">
+          {!collapsed && (
+            <>
+              <div className="mb-1.5 flex items-center justify-between px-1">
+                <span className="text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
+                  History
+                </span>
+                {conversations.length > 0 && (
+                  <span className="text-[10px] text-stone-300 dark:text-stone-600">
+                    {conversations.length}
+                  </span>
+                )}
+              </div>
+              {/* Search box */}
+              {conversations.length > 3 && (
+                <div className="mb-2">
+                  <HistorySearch conversations={conversations} onSelect={(id) => {
+                    onSelectConversation?.(id);
+                    onMobileOpenChange(false);
+                  }} formatTime={formatTime} />
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {conversations.length === 0 ? (
+                  <div className="px-1 py-6 text-center">
+                    <MessageSquare className="mx-auto mb-2 size-6 text-stone-300 dark:text-stone-600" />
+                    <div className="text-[11px] text-stone-400 dark:text-stone-500">
+                      No chats yet
+                    </div>
+                    <div className="mt-1 text-[10px] text-stone-300 dark:text-stone-600">
+                      Start a conversation
+                    </div>
+                  </div>
+                ) : (
+                  conversations.slice(0, 50).map((conv, i) => (
+                    <ConversationItem
+                      key={conv.id}
+                      conversation={conv}
+                      selected={conv.id === selectedConversationId}
+                      collapsed={false}
+                      onSelect={(id) => {
+                        onSelectConversation?.(id);
+                        onMobileOpenChange(false);
+                      }}
+                      onDelete={onDeleteConversation || (() => {})}
+                      onRename={onRenameConversation || (() => {})}
+                      formatTime={formatTime}
+                      index={i}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+          {collapsed && (
+            <div className="space-y-0.5 pt-1">
+              {conversations.slice(0, 10).map((conv, i) => (
+                <ConversationItem
+                  key={conv.id}
+                  conversation={conv}
+                  selected={conv.id === selectedConversationId}
+                  collapsed={true}
+                  onSelect={(id) => {
+                    onSelectConversation?.(id);
+                    onMobileOpenChange(false);
+                  }}
+                  onDelete={onDeleteConversation || (() => {})}
+                  onRename={onRenameConversation || (() => {})}
+                  formatTime={formatTime}
+                  index={i}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer: User + actions */}
