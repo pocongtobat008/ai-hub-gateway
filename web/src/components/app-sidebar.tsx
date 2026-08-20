@@ -510,8 +510,8 @@ export function AppSidebar({
           </nav>
         )}
 
-        {/* Conversation History */}
-        <div className="px-3 pt-3 pb-2 flex flex-col">
+        {/* Conversation History — hidden when collapsed */}
+        <div className={cn("px-3 pt-3 pb-2 flex flex-col", collapsed && "hidden")}>
           {!collapsed && (
             <>
               <div className="mb-1.5 flex items-center justify-between px-1">
@@ -536,7 +536,6 @@ export function AppSidebar({
               <div className="space-y-0.5">
                 {conversations.length === 0 ? (
                   <div className="px-1 py-6 text-center">
-                    <MessageSquare className="mx-auto mb-2 size-6 text-stone-300 dark:text-stone-600" />
                     <div className="text-[11px] text-stone-400 dark:text-stone-500">
                       No chats yet
                     </div>
@@ -565,26 +564,7 @@ export function AppSidebar({
               </div>
             </>
           )}
-          {collapsed && (
-            <div className="space-y-0.5 pt-1">
-              {conversations.slice(0, 10).map((conv, i) => (
-                <ConversationItem
-                  key={conv.id}
-                  conversation={conv}
-                  selected={conv.id === selectedConversationId}
-                  collapsed={true}
-                  onSelect={(id) => {
-                    onSelectConversation?.(id);
-                    onMobileOpenChange(false);
-                  }}
-                  onDelete={onDeleteConversation || (() => {})}
-                  onRename={onRenameConversation || (() => {})}
-                  formatTime={formatTime}
-                  index={i}
-                />
-              ))}
-            </div>
-          )}
+
         </div>
       </div>
 
