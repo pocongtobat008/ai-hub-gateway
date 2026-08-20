@@ -32,6 +32,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   clearStoredAuthSession,
+  getStoredAuthKey,
   type StoredAuthSession,
 } from "@/store/auth";
 import type { ChatConversation } from "@/store/chat-conversations";
@@ -430,7 +431,7 @@ export function AppSidebar({
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const authKey = typeof window !== "undefined" ? localStorage.getItem("chatgpt2api_auth_key") || "" : "";
+        const authKey = await getStoredAuthKey();
         const headers: Record<string, string> = authKey ? { Authorization: `Bearer ${authKey}` } : {};
         const baseUrl = typeof window !== "undefined" ? (window as any).__NEXT_DATA__?.props?.pageProps?.apiUrl || "" : "";
         const urls: Record<string, string> = {
