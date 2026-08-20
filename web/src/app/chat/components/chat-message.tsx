@@ -1,13 +1,91 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
+import React, { useCallback, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  Edit3,
+  LoaderCircle,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils";
 import { messageImages, messageText, type ChatMessage } from "@/store/chat-conversations";
 
-function Markdown({ text }: { text: string }) {
+// ── Copy to clipboard helper ───────────────────────────────────────────────
+
+function useCopyToClipboard() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copy = useCallback(async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }, []);
+
+  return { copiedId, copy };
+}
+
+// ── Copy button component ──────────────────────────────────────────────────
+
+function CopyButton({ id, text, copiedId, copy, className }: {
+  id: string;
+  text: string;
+  copiedId: string | null;
+  copy: (id: string, text: string) => void;
+  className?: string;
+}) {
+  const isCopied = copiedId === id;
+  return (
+    <button
+      type="button"
+      onClick={() => copy(id, text)}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200",
+        isCopied
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+          : "bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 dark:bg-white/10 dark:text-stone-400 dark:hover:bg-white/15",
+        className,
+      )}
+    >
+      {isCopied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      {isCopied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
+// ── Download helper ────────────────────────────────────────────────────────
+
+function downloadUrl(url: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ── Markdown with enhanced code blocks ─────────────────────────────────────
+
+function Markdown({ text, messageId }: { text: string; messageId: string }) {
+  const { copiedId, copy } = useCopyToClipboard();
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -48,26 +126,79 @@ function Markdown({ text }: { text: string }) {
         blockquote: ({ className, ...props }) => (
           <blockquote className={cn("my-4 border-l-4 border-stone-300 bg-white/70 py-2 pr-4 pl-4 text-stone-700 dark:border-white/20 dark:bg-white/[0.04] dark:text-stone-300", className)} {...props} />
         ),
-        code: ({ className, ...props }) => (
-          <code
-            className={cn(
-              "rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.88em] text-stone-800 dark:bg-white/10 dark:text-stone-100",
-              className,
-            )}
-            {...props}
-          />
-        ),
-        pre: ({ className, children, ...props }) => (
-          <pre
-            className={cn(
-              "hide-scrollbar my-4 overflow-x-auto rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-[13px] leading-6 text-stone-800 dark:border-white/10 dark:bg-black/40 dark:text-stone-100",
-              className,
-            )}
-            {...props}
-          >
-            {children}
-          </pre>
-        ),
+        code: ({ className, children, ...props }) => {
+          const isInline = !className?.includes("language-");
+          if (isInline) {
+            return (
+              <code
+                className={cn(
+                  "rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.88em] text-stone-800 dark:bg-white/10 dark:text-stone-100",
+                  className,
+                )}
+                {...props}
+              />
+            );
+          }
+          // Block code — rendered by <pre> parent
+          return (
+            <code className={cn("font-mono text-[13px]", className)} {...props}>
+              {children}
+            </code>
+          );
+        },
+        pre: ({ className, children, ...props }) => {
+          // Extract language from child code className
+          let language = "";
+          let codeText = "";
+          const childArray = React.Children.toArray(children);
+          for (const child of childArray) {
+            if (React.isValidElement(child)) {
+              const childProps = child.props as Record<string, unknown>;
+              const childClassName = String(childProps.className || "");
+              const langMatch = childClassName.match(/language-(\w+)/);
+              if (langMatch) language = langMatch[1];
+              // Get text content
+              const get_text = (node: React.ReactNode): string => {
+                if (typeof node === "string") return node;
+                if (typeof node === "number") return String(node);
+                if (React.isValidElement(node)) {
+                  const p = node.props as Record<string, unknown>;
+                  return get_text(p.children as React.ReactNode);
+                }
+                if (Array.isArray(node)) return node.map(get_text).join("");
+                return "";
+              };
+              codeText = get_text(childProps.children as React.ReactNode);
+            }
+          }
+          const blockId = `${messageId}-code-${language}-${codeText.slice(0, 20)}`;
+
+          return (
+            <div className="my-4 group/code">
+              <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-stone-200 bg-stone-100 px-3.5 py-1.5 dark:border-white/10 dark:bg-white/[0.06]">
+                <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
+                  {language || "code"}
+                </span>
+                <CopyButton
+                  id={blockId}
+                  text={codeText}
+                  copiedId={copiedId}
+                  copy={copy}
+                  className="opacity-0 transition-opacity group-hover/code:opacity-100"
+                />
+              </div>
+              <pre
+                className={cn(
+                  "hide-scrollbar overflow-x-auto rounded-b-xl border border-stone-200 bg-stone-50 p-3.5 text-[13px] leading-6 text-stone-800 dark:border-white/10 dark:bg-black/40 dark:text-stone-100",
+                  className,
+                )}
+                {...props}
+              >
+                {children}
+              </pre>
+            </div>
+          );
+        },
         table: ({ className, ...props }) => (
           <div className="my-4 overflow-x-auto">
             <table className={cn("w-full border-collapse text-sm", className)} {...props} />
@@ -82,8 +213,37 @@ function Markdown({ text }: { text: string }) {
         hr: ({ className, ...props }) => (
           <hr className={cn("my-5 border-stone-200 dark:border-white/10", className)} {...props} />
         ),
-        img: ({ className, ...props }) => (
-          <img className={cn("my-3 max-w-full rounded-xl", className)} {...props} />
+        img: ({ className, src, alt, ...props }) => (
+          <div className="group/img relative my-3 inline-block">
+            <img
+              className={cn("max-w-full rounded-xl", className)}
+              src={typeof src === "string" ? src : ""}
+              alt={alt}
+              {...props}
+            />
+            {typeof src === "string" && src && (
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover/img:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => downloadUrl(src, `image-${Date.now()}.png`)}
+                  className="inline-flex size-7 items-center justify-center rounded-lg bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70"
+                  title="Download image"
+                >
+                  <Download className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = `/image`;
+                  }}
+                  className="inline-flex size-7 items-center justify-center rounded-lg bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70"
+                  title="Edit in Image Gen"
+                >
+                  <Edit3 className="size-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         ),
       }}
     >
@@ -91,6 +251,8 @@ function Markdown({ text }: { text: string }) {
     </ReactMarkdown>
   );
 }
+
+// ── Loading dots ───────────────────────────────────────────────────────────
 
 function LoadingDots() {
   return (
@@ -102,50 +264,109 @@ function LoadingDots() {
   );
 }
 
-type ChatMessageViewProps = {
-  message: ChatMessage;
-  isStreaming: boolean;
-};
+// ── User message (collapsible prompt + copy) ───────────────────────────────
 
-export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) {
+function UserMessage({ message }: { message: ChatMessage }) {
   const text = messageText(message);
   const images = messageImages(message);
+  const { copiedId, copy } = useCopyToClipboard();
+  const [expanded, setExpanded] = useState(false);
 
-  if (message.role === "user") {
-    return (
-      <div className="flex justify-end gap-3 animate-message-appear">
-        <div className="max-w-[85%] sm:max-w-[75%]">
-          {images.length > 0 ? (
-            <div className="mb-2 flex flex-wrap justify-end gap-2">
-              {images.map((url, index) => (
+  const isLong = text.length > 200 || text.split("\n").length > 3;
+  const displayText = isLong && !expanded
+    ? text.split("\n").slice(0, 2).join("\n") + (text.split("\n").length > 2 ? "..." : "")
+    : text;
+  const promptId = `prompt-${message.id}`;
+
+  return (
+    <div className="flex justify-end gap-3 animate-message-appear">
+      <div className="max-w-[85%] sm:max-w-[75%]">
+        {images.length > 0 ? (
+          <div className="mb-2 flex flex-wrap justify-end gap-2">
+            {images.map((url, index) => (
+              <div key={`${message.id}-${index}`} className="group/img relative">
                 <img
-                  key={`${message.id}-${index}`}
                   src={url}
                   alt=""
                   className="h-20 w-20 rounded-xl border border-stone-200 object-cover dark:border-white/10 sm:h-24 sm:w-24"
                 />
-              ))}
-            </div>
-          ) : null}
-          {text ? (
-            <div className="rounded-3xl rounded-br-lg bg-stone-950 px-4 py-2.5 text-[15px] leading-6 whitespace-pre-wrap text-white shadow-sm dark:bg-white dark:text-stone-950 sm:px-5 sm:py-3">
-              {text}
-            </div>
-          ) : null}
-        </div>
+                <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 transition-opacity group-hover/img:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => downloadUrl(url, `upload-${index + 1}.png`)}
+                    className="inline-flex size-5 items-center justify-center rounded-md bg-black/50 text-white backdrop-blur-sm"
+                    title="Download"
+                  >
+                    <Download className="size-2.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {text ? (
+          <div className="rounded-3xl rounded-br-lg bg-stone-950 px-4 py-2.5 text-[15px] leading-6 text-white shadow-sm dark:bg-white dark:text-stone-950 sm:px-5 sm:py-3">
+            {isLong ? (
+              <div>
+                <div className="whitespace-pre-wrap">
+                  {expanded ? text : displayText}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(!expanded)}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-300 dark:text-stone-500 dark:hover:text-stone-400"
+                >
+                  {expanded ? (
+                    <>
+                      <ChevronDown className="size-3" />
+                      Collapse
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="size-3" />
+                      Show more ({text.split("\n").length} lines)
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap">{text}</div>
+            )}
+          </div>
+        ) : null}
+        {/* Copy prompt button */}
+        {text && (
+          <div className="mt-1.5 flex justify-end">
+            <CopyButton
+              id={promptId}
+              text={text}
+              copiedId={copiedId}
+              copy={copy}
+              className="opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+            />
+          </div>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+// ── Assistant message ──────────────────────────────────────────────────────
+
+function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isStreaming: boolean }) {
+  const text = messageText(message);
+  const { copiedId, copy } = useCopyToClipboard();
+  const responseId = `response-${message.id}`;
 
   return (
-    <div className="flex gap-3 animate-message-appear">
+    <div className="flex gap-3 animate-message-appear group/msg">
       <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-stone-950 text-[10px] font-bold text-white dark:bg-white dark:text-stone-950">
         AI
       </div>
       <div className="min-w-0 flex-1">
         <div className="overflow-hidden text-[15px] leading-6">
           {text ? (
-            <Markdown text={text} />
+            <Markdown text={text} messageId={message.id} />
           ) : isStreaming ? (
             <LoadingDots />
           ) : message.error ? null : null}
@@ -164,7 +385,32 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) 
             Generating...
           </span>
         ) : null}
+        {/* Copy response button */}
+        {text && !isStreaming && (
+          <div className="mt-2 opacity-0 transition-opacity group-hover/msg:opacity-100">
+            <CopyButton
+              id={responseId}
+              text={text}
+              copiedId={copiedId}
+              copy={copy}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+// ── Exported component ─────────────────────────────────────────────────────
+
+type ChatMessageViewProps = {
+  message: ChatMessage;
+  isStreaming: boolean;
+};
+
+export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) {
+  if (message.role === "user") {
+    return <UserMessage message={message} />;
+  }
+  return <AssistantMessage message={message} isStreaming={isStreaming} />;
 }
