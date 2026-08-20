@@ -177,7 +177,12 @@ function ManusAccountsContent() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Manus Accounts</h1>
+          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            Manus Accounts
+            <span className="ml-3 inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-sm font-bold text-stone-700 dark:bg-white/10 dark:text-stone-300">
+              {accounts.length}
+            </span>
+          </h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
             Manage Manus API keys for round-robin rotation. Models: manus-1.6, agent-default-main_task.
           </p>

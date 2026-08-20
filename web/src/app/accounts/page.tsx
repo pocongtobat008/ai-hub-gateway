@@ -718,7 +718,12 @@ function AccountsPageContent() {
           <div className="text-xs font-semibold tracking-[0.18em] text-stone-500 uppercase">
             Account Pool
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Account Pool Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Account Pool Management
+            <span className="ml-3 inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-sm font-bold text-stone-700 dark:bg-white/10 dark:text-stone-300">
+              {accounts.length}
+            </span>
+          </h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
