@@ -27,7 +27,6 @@ function useCopyToClipboard() {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
-      // fallback
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
@@ -44,11 +43,19 @@ function useCopyToClipboard() {
 
 // ── Copy button component ──────────────────────────────────────────────────
 
-function CopyButton({ id, text, copiedId, copy, className }: {
+function CopyButton({
+  id,
+  text,
+  copiedId,
+  copy,
+  label,
+  className,
+}: {
   id: string;
   text: string;
   copiedId: string | null;
   copy: (id: string, text: string) => void;
+  label?: string;
   className?: string;
 }) {
   const isCopied = copiedId === id;
@@ -57,15 +64,24 @@ function CopyButton({ id, text, copiedId, copy, className }: {
       type="button"
       onClick={() => copy(id, text)}
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200",
+        "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200",
         isCopied
           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
           : "bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 dark:bg-white/10 dark:text-stone-400 dark:hover:bg-white/15",
         className,
       )}
     >
-      {isCopied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      {isCopied ? "Copied" : "Copy"}
+      {isCopied ? (
+        <>
+          <Check className="size-3" />
+          Copied!
+        </>
+      ) : (
+        <>
+          <Copy className="size-3" />
+          {label || "Copy"}
+        </>
+      )}
     </button>
   );
 }
@@ -114,17 +130,17 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
           <h4 className={cn("mt-4 mb-2 text-base font-semibold text-stone-900 dark:text-stone-100", className)} {...props} />
         ),
         p: ({ className, ...props }) => (
-          <p className={cn("my-3 leading-7 text-stone-800 first:mt-0 last:mb-0 dark:text-stone-200", className)} {...props} />
+          <p className={cn("my-2 leading-7 text-stone-800 first:mt-0 last:mb-0 dark:text-stone-200", className)} {...props} />
         ),
         ul: ({ className, ...props }) => (
-          <ul className={cn("my-3 list-disc space-y-1.5 pl-6 leading-7 text-stone-800 dark:text-stone-200", className)} {...props} />
+          <ul className={cn("my-2 list-disc space-y-1 pl-6 leading-7 text-stone-800 dark:text-stone-200", className)} {...props} />
         ),
         ol: ({ className, ...props }) => (
-          <ol className={cn("my-3 list-decimal space-y-1.5 pl-6 leading-7 text-stone-800 dark:text-stone-200", className)} {...props} />
+          <ol className={cn("my-2 list-decimal space-y-1 pl-6 leading-7 text-stone-800 dark:text-stone-200", className)} {...props} />
         ),
         li: ({ className, ...props }) => <li className={cn("", className)} {...props} />,
         blockquote: ({ className, ...props }) => (
-          <blockquote className={cn("my-4 border-l-4 border-stone-300 bg-white/70 py-2 pr-4 pl-4 text-stone-700 dark:border-white/20 dark:bg-white/[0.04] dark:text-stone-300", className)} {...props} />
+          <blockquote className={cn("my-3 border-l-4 border-stone-300 bg-white/70 py-1 pr-4 pl-4 text-stone-700 dark:border-white/20 dark:bg-white/[0.04] dark:text-stone-300", className)} {...props} />
         ),
         code: ({ className, children, ...props }) => {
           const isInline = !className?.includes("language-");
@@ -132,14 +148,13 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
             return (
               <code
                 className={cn(
-                  "rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.88em] text-stone-800 dark:bg-white/10 dark:text-stone-100",
+                  "rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.85em] text-stone-800 dark:bg-white/10 dark:text-stone-100",
                   className,
                 )}
                 {...props}
               />
             );
           }
-          // Block code — rendered by <pre> parent
           return (
             <code className={cn("font-mono text-[13px]", className)} {...props}>
               {children}
@@ -147,7 +162,6 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
           );
         },
         pre: ({ className, children, ...props }) => {
-          // Extract language from child code className
           let language = "";
           let codeText = "";
           const childArray = React.Children.toArray(children);
@@ -157,7 +171,6 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
               const childClassName = String(childProps.className || "");
               const langMatch = childClassName.match(/language-(\w+)/);
               if (langMatch) language = langMatch[1];
-              // Get text content
               const get_text = (node: React.ReactNode): string => {
                 if (typeof node === "string") return node;
                 if (typeof node === "number") return String(node);
@@ -174,8 +187,8 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
           const blockId = `${messageId}-code-${language}-${codeText.slice(0, 20)}`;
 
           return (
-            <div className="my-4 group/code">
-              <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-stone-200 bg-stone-100 px-3.5 py-1.5 dark:border-white/10 dark:bg-white/[0.06]">
+            <div className="my-3 group/code">
+              <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-stone-200 bg-stone-100 px-3 py-1.5 dark:border-white/10 dark:bg-white/[0.06]">
                 <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
                   {language || "code"}
                 </span>
@@ -184,12 +197,13 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                   text={codeText}
                   copiedId={copiedId}
                   copy={copy}
+                  label=""
                   className="opacity-0 transition-opacity group-hover/code:opacity-100"
                 />
               </div>
               <pre
                 className={cn(
-                  "hide-scrollbar overflow-x-auto rounded-b-xl border border-stone-200 bg-stone-50 p-3.5 text-[13px] leading-6 text-stone-800 dark:border-white/10 dark:bg-black/40 dark:text-stone-100",
+                  "hide-scrollbar overflow-x-auto rounded-b-xl border border-stone-200 bg-stone-50 p-3 text-[13px] leading-6 text-stone-800 dark:border-white/10 dark:bg-black/40 dark:text-stone-100",
                   className,
                 )}
                 {...props}
@@ -200,7 +214,7 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
           );
         },
         table: ({ className, ...props }) => (
-          <div className="my-4 overflow-x-auto">
+          <div className="my-3 overflow-x-auto">
             <table className={cn("w-full border-collapse text-sm", className)} {...props} />
           </div>
         ),
@@ -211,7 +225,7 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
           <td className={cn("border border-stone-200 px-3 py-1.5 dark:border-white/10", className)} {...props} />
         ),
         hr: ({ className, ...props }) => (
-          <hr className={cn("my-5 border-stone-200 dark:border-white/10", className)} {...props} />
+          <hr className={cn("my-4 border-stone-200 dark:border-white/10", className)} {...props} />
         ),
         img: ({ className, src, alt, ...props }) => (
           <div className="group/img relative my-3 inline-block">
@@ -264,7 +278,7 @@ function LoadingDots() {
   );
 }
 
-// ── User message (collapsible prompt + copy) ───────────────────────────────
+// ── User message (1-line collapsible + always-visible copy) ────────────────
 
 function UserMessage({ message }: { message: ChatMessage }) {
   const text = messageText(message);
@@ -272,16 +286,16 @@ function UserMessage({ message }: { message: ChatMessage }) {
   const { copiedId, copy } = useCopyToClipboard();
   const [expanded, setExpanded] = useState(false);
 
-  const isLong = text.length > 200 || text.split("\n").length > 3;
-  const displayText = isLong && !expanded
-    ? text.split("\n").slice(0, 2).join("\n") + (text.split("\n").length > 2 ? "..." : "")
-    : text;
+  const lines = text.split("\n");
+  const isLong = lines.length > 1 || text.length > 120;
+  const firstLine = lines[0] || text;
   const promptId = `prompt-${message.id}`;
 
   return (
     <div className="flex justify-end gap-3 animate-message-appear">
       <div className="max-w-[85%] sm:max-w-[75%]">
-        {images.length > 0 ? (
+        {/* Image uploads */}
+        {images.length > 0 && (
           <div className="mb-2 flex flex-wrap justify-end gap-2">
             {images.map((url, index) => (
               <div key={`${message.id}-${index}`} className="group/img relative">
@@ -303,38 +317,48 @@ function UserMessage({ message }: { message: ChatMessage }) {
               </div>
             ))}
           </div>
-        ) : null}
-        {text ? (
+        )}
+
+        {/* Prompt bubble */}
+        {text && (
           <div className="rounded-3xl rounded-br-lg bg-stone-950 px-4 py-2.5 text-[15px] leading-6 text-white shadow-sm dark:bg-white dark:text-stone-950 sm:px-5 sm:py-3">
-            {isLong ? (
+            {isLong && !expanded ? (
               <div>
-                <div className="whitespace-pre-wrap">
-                  {expanded ? text : displayText}
-                </div>
+                <div className="whitespace-pre-wrap">{firstLine}</div>
                 <button
                   type="button"
-                  onClick={() => setExpanded(!expanded)}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-300 dark:text-stone-500 dark:hover:text-stone-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded(true);
+                  }}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-200 dark:text-stone-500 dark:hover:text-stone-400"
                 >
-                  {expanded ? (
-                    <>
-                      <ChevronDown className="size-3" />
-                      Collapse
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRight className="size-3" />
-                      Show more ({text.split("\n").length} lines)
-                    </>
-                  )}
+                  <ChevronRight className="size-3" />
+                  Show more ({lines.length} lines)
+                </button>
+              </div>
+            ) : isLong && expanded ? (
+              <div>
+                <div className="whitespace-pre-wrap">{text}</div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded(false);
+                  }}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-200 dark:text-stone-500 dark:hover:text-stone-400"
+                >
+                  <ChevronDown className="size-3" />
+                  Collapse
                 </button>
               </div>
             ) : (
               <div className="whitespace-pre-wrap">{text}</div>
             )}
           </div>
-        ) : null}
-        {/* Copy prompt button */}
+        )}
+
+        {/* Copy prompt — always visible */}
         {text && (
           <div className="mt-1.5 flex justify-end">
             <CopyButton
@@ -342,7 +366,7 @@ function UserMessage({ message }: { message: ChatMessage }) {
               text={text}
               copiedId={copiedId}
               copy={copy}
-              className="opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+              label="Copy prompt"
             />
           </div>
         )}
@@ -364,6 +388,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
         AI
       </div>
       <div className="min-w-0 flex-1">
+        {/* Response content */}
         <div className="overflow-hidden text-[15px] leading-6">
           {text ? (
             <Markdown text={text} messageId={message.id} />
@@ -371,28 +396,31 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
             <LoadingDots />
           ) : message.error ? null : null}
         </div>
-        {message.error ? (
+
+        {/* Error */}
+        {message.error && (
           <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/70 px-3.5 py-2.5 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/20 dark:text-rose-300">
             {message.error}
           </div>
-        ) : null}
-        {isStreaming && !text ? (
-          <span className="sr-only">Assistant is typing</span>
-        ) : null}
-        {isStreaming && text ? (
+        )}
+
+        {/* Streaming indicator */}
+        {isStreaming && text && (
           <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-stone-400">
             <LoaderCircle className="size-3 animate-spin" />
             Generating...
           </span>
-        ) : null}
-        {/* Copy response button */}
+        )}
+
+        {/* Copy response — always visible */}
         {text && !isStreaming && (
-          <div className="mt-2 opacity-0 transition-opacity group-hover/msg:opacity-100">
+          <div className="mt-2">
             <CopyButton
               id={responseId}
               text={text}
               copiedId={copiedId}
               copy={copy}
+              label="Copy response"
             />
           </div>
         )}
