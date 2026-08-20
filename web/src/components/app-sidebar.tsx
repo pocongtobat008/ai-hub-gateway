@@ -12,6 +12,7 @@ import {
   FileJson,
   Film,
   Gem,
+  Globe,
   Image,
   LogOut,
   MessageSquare,
@@ -51,6 +52,7 @@ const accountNav: NavItem[] = [
   { href: "/deepseek-accounts", label: "DeepSeek", icon: Atom },
   { href: "/grok-accounts", label: "Grok", icon: Zap },
   { href: "/manus-accounts", label: "Manus", icon: Bot },
+  { href: "/custom-accounts", label: "Custom / Local", icon: Globe },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 

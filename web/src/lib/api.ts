@@ -1335,3 +1335,63 @@ export async function testAllManus() {
 export async function resetManusAccounts() {
   return httpRequest<{ ok: boolean; reset: number }>("/api/manus/reset", { method: "POST" });
 }
+
+// ─── Custom / Local Provider Accounts ──────────────────────────────
+
+export type CustomAccount = {
+  id: string;
+  label?: string;
+  base_url: string;
+  api_key_masked?: string;
+  models: string[];
+  status: "normal" | "rate_limited" | "abnormal" | "disabled";
+  last_error?: string | null;
+  last_error_at?: string | null;
+  last_used_at?: string | null;
+  created_at?: string;
+  fail_count?: number;
+};
+
+export async function fetchCustomAccounts() {
+  return httpRequest<{ accounts: CustomAccount[] }>("/api/custom/accounts");
+}
+
+export async function createCustomAccount(input: {
+  base_url: string;
+  api_key?: string;
+  models?: string[];
+  label?: string;
+}) {
+  return httpRequest<CustomAccount>("/api/custom/accounts", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function deleteCustomAccount(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/custom/accounts/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function validateCustomModels(input: { base_url: string; api_key?: string }) {
+  return httpRequest<{ ok: boolean; models: string[]; count: number }>("/api/custom/validate-models", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function testCustom(input: { account_id?: string }) {
+  return httpRequest<{ ok: boolean; error?: string }>("/api/custom/test", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function testAllCustom() {
+  return httpRequest<{ ok: boolean; total: number; passed: number; failed: number }>("/api/custom/test-all", { method: "POST" });
+}
+
+export async function resetCustomAccounts() {
+  return httpRequest<{ ok: boolean; reset: number }>("/api/custom/reset", { method: "POST" });
+}

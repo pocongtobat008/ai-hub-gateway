@@ -7,6 +7,7 @@ from services.deepseek_provider import deepseek_provider
 from services.gemini_provider import gemini_provider
 from services.grok_provider import grok_provider
 from services.manus_account_service import list_accounts as list_manus_accounts
+from services.custom_provider import get_all_custom_models
 from services.model_service import model_catalog_service
 from utils.helper import CODEX_IMAGE_MODEL
 
@@ -144,5 +145,14 @@ def list_models() -> dict[str, Any]:
                     "available": True,
                     "display_name": model_id,
                 })
+
+    # Add custom provider models
+    custom_models = get_all_custom_models()
+    for custom_model in custom_models:
+        model_id = str(custom_model.get("id") or "").strip()
+        if not model_id or model_id in seen:
+            continue
+        seen.add(model_id)
+        data.append(custom_model)
 
     return result

@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from api import accounts, ai, antislop, conversations, deepseek, gemini, grok, image_tasks, manus, system
+from api import accounts, ai, antislop, conversations, custom, deepseek, gemini, grok, image_tasks, manus, system
 from api.errors import install_exception_handlers
 from api.support import resolve_web_asset, start_limited_account_watcher
 from services.backup_service import backup_service
@@ -51,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(conversations.create_router())
     app.include_router(antislop.create_router())
     app.include_router(manus.create_router())
+    app.include_router(custom.create_router())
     app.include_router(system.create_router(app_version))
 
     @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
