@@ -33,6 +33,7 @@ import {
   type StoredAuthSession,
 } from "@/store/auth";
 import type { ChatConversation } from "@/store/chat-conversations";
+import type { ImageConversation } from "@/store/image-conversations";
 
 type NavItem = { href: string; label: string; icon: React.ElementType };
 
@@ -64,6 +65,7 @@ type AppSidebarProps = {
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
   conversations?: ChatConversation[];
+  imageConversations?: ImageConversation[];
   selectedConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onCreateDraft?: () => void;
@@ -393,6 +395,7 @@ export function AppSidebar({
   mobileOpen,
   onMobileOpenChange,
   conversations = [],
+  imageConversations = [],
   selectedConversationId,
   onSelectConversation,
   onCreateDraft,
@@ -511,61 +514,110 @@ export function AppSidebar({
         )}
 
         {/* Conversation History — hidden when collapsed */}
-        <div className={cn("px-3 pt-3 pb-2 flex flex-col", collapsed && "hidden")}>
-          {!collapsed && (
-            <>
-              <div className="mb-1.5 flex items-center justify-between px-1">
-                <span className="text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
-                  History
-                </span>
-                {conversations.length > 0 && (
-                  <span className="text-[10px] text-stone-300 dark:text-stone-600">
-                    {conversations.length}
-                  </span>
-                )}
-              </div>
-              {/* Search box */}
-              {conversations.length > 3 && (
-                <div className="mb-2">
-                  <HistorySearch conversations={conversations} onSelect={(id) => {
-                    onSelectConversation?.(id);
-                    onMobileOpenChange(false);
-                  }} formatTime={formatTime} />
-                </div>
-              )}
-              <div className="space-y-0.5">
-                {conversations.length === 0 ? (
-                  <div className="px-1 py-6 text-center">
-                    <div className="text-[11px] text-stone-400 dark:text-stone-500">
-                      No chats yet
-                    </div>
-                    <div className="mt-1 text-[10px] text-stone-300 dark:text-stone-600">
-                      Start a conversation
-                    </div>
-                  </div>
-                ) : (
-                  conversations.slice(0, 50).map((conv, i) => (
-                    <ConversationItem
-                      key={conv.id}
-                      conversation={conv}
-                      selected={conv.id === selectedConversationId}
-                      collapsed={false}
-                      onSelect={(id) => {
-                        onSelectConversation?.(id);
-                        onMobileOpenChange(false);
-                      }}
-                      onDelete={onDeleteConversation || (() => {})}
-                      onRename={onRenameConversation || (() => {})}
-                      formatTime={formatTime}
-                      index={i}
-                    />
-                  ))
-                )}
-              </div>
-            </>
-          )}
+        {(() => {
+          // Merge chat + image conversations into unified timeline
+          type UnifiedItem = {
+            id: string;
+            title: string;
+            type: "chat" | "image";
+            updatedAt: string;
+            messageCount: number;
+            meta?: string;
+          };
+          const chatItems: UnifiedItem[] = conversations.map((c) => ({
+            id: c.id,
+            title: c.title,
+            type: "chat" as const,
+            updatedAt: c.updatedAt,
+            messageCount: c.messages.length,
+            meta: `${c.messages.length} msg`,
+          }));
+          const imageItems: UnifiedItem[] = imageConversations.map((c) => ({
+            id: `img:${c.id}`,
+            title: c.title || "Image generation",
+            type: "image" as const,
+            updatedAt: c.updatedAt,
+            messageCount: c.turns.length,
+            meta: `${c.turns.length} rounds`,
+          }));
+          const allItems = [...chatItems, ...imageItems]
+            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+            .slice(0, 50);
+          const totalCount = allItems.length;
 
-        </div>
+          return (
+            <div className={cn("px-3 pt-3 pb-2 flex flex-col", collapsed && "hidden")}>
+              {!collapsed && (
+                <>
+                  <div className="mb-1.5 flex items-center justify-between px-1">
+                    <span className="text-[10px] font-bold tracking-[0.15em] text-stone-400 uppercase dark:text-stone-500">
+                      History
+                    </span>
+                    {totalCount > 0 && (
+                      <span className="text-[10px] text-stone-300 dark:text-stone-600">
+                        {totalCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-0.5">
+                    {totalCount === 0 ? (
+                      <div className="px-1 py-6 text-center">
+                        <div className="text-[11px] text-stone-400 dark:text-stone-500">
+                          No history yet
+                        </div>
+                        <div className="mt-1 text-[10px] text-stone-300 dark:text-stone-600">
+                          Start a conversation or generate an image
+                        </div>
+                      </div>
+                    ) : (
+                      allItems.map((item, i) => {
+                        const isActive = item.id === selectedConversationId || item.id === `img:${selectedConversationId}`;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (item.type === "image") {
+                                router.push(`/image?id=${item.id.replace("img:", "")}`);
+                              } else {
+                                onSelectConversation?.(item.id);
+                              }
+                              onMobileOpenChange(false);
+                            }}
+                            className={cn(
+                              "group relative flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all duration-200 min-h-[40px]",
+                              isActive
+                                ? "bg-stone-900/8 dark:bg-stone-100/8"
+                                : "hover:bg-stone-100/60 dark:hover:bg-white/5",
+                            )}
+                            style={{ animationDelay: `${i * 30}ms` }}
+                          >
+                            <div className={cn(
+                              "size-5 shrink-0 flex items-center justify-center rounded-md transition-colors",
+                              item.type === "image"
+                                ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+                                : "bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-stone-400",
+                            )}>
+                              {item.type === "image" ? <Image className="size-3" /> : <MessageSquare className="size-3" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[13px] font-medium text-stone-700 leading-tight dark:text-stone-300">
+                                {item.title}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
+                                {item.meta} · {formatTime(item.updatedAt)}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Footer: User + actions */}

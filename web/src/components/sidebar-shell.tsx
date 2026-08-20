@@ -9,11 +9,22 @@ import { PageTransition } from "@/components/page-transition";
 import { getValidatedAuthSession } from "@/lib/auth-session";
 import { type StoredAuthSession } from "@/store/auth";
 import type { ChatConversation } from "@/store/chat-conversations";
+import { listImageConversations, type ImageConversation } from "@/store/image-conversations";
 
 // ── Context to share conversation data from chat page to sidebar ─────────────
 
+export type UnifiedConversation = {
+  id: string;
+  title: string;
+  type: "chat" | "image";
+  updatedAt: string;
+  messageCount: number;
+  meta?: string;
+};
+
 export type SidebarCallbacks = {
   conversations: ChatConversation[];
+  imageConversations: ImageConversation[];
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onCreateDraft: () => void;
@@ -25,6 +36,7 @@ export type SidebarCallbacks = {
 const SidebarCallbacksContext = createContext<React.MutableRefObject<SidebarCallbacks>>({
   current: {
     conversations: [],
+    imageConversations: [],
     selectedConversationId: null,
     onSelectConversation: () => {},
     onCreateDraft: () => {},
@@ -47,6 +59,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
   const [, forceUpdate] = useState(0);
   const callbacksRef = useRef<SidebarCallbacks>({
     conversations: [],
+    imageConversations: [],
     selectedConversationId: null,
     onSelectConversation: () => {},
     onCreateDraft: () => {},
@@ -54,6 +67,32 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
     onRenameConversation: () => {},
     formatConversationTime: () => "",
   });
+  const [imageConversations, setImageConversations] = useState<ImageConversation[]>([]);
+
+  // Load image conversations
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const items = await listImageConversations();
+        if (active) setImageConversations(items);
+      } catch { /* ignore */ }
+    };
+    void load();
+    const interval = setInterval(load, 10000);
+    return () => { active = false; clearInterval(interval); };
+  }, [pathname]);
+
+  // Expose refresh for image page
+  useEffect(() => {
+    (window as any).__refreshSidebarImageConversations = async () => {
+      try {
+        const items = await listImageConversations();
+        setImageConversations(items);
+      } catch { /* ignore */ }
+    };
+    return () => { delete (window as any).__refreshSidebarImageConversations; };
+  }, []);
 
   // Detect desktop vs mobile
   useEffect(() => {
@@ -144,6 +183,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
           mobileOpen={mobileOpen}
           onMobileOpenChange={setMobileOpen}
           conversations={c.conversations}
+          imageConversations={imageConversations}
           selectedConversationId={c.selectedConversationId}
           onSelectConversation={c.onSelectConversation}
           onCreateDraft={c.onCreateDraft}

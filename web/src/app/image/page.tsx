@@ -627,13 +627,23 @@ function ImagePageContent({ isAdmin }: { isAdmin: boolean }) {
 
       conversationsRef.current = normalizedItems;
       setConversations(normalizedItems);
+      // Check URL param ?id= for deep-link from sidebar
+      const urlId = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("id")
+        : null;
       const storedConversationId =
         typeof window !== "undefined" ? window.localStorage.getItem(ACTIVE_CONVERSATION_STORAGE_KEY) : null;
       const nextSelectedConversationId =
-        (storedConversationId && normalizedItems.some((conversation) => conversation.id === storedConversationId)
-          ? storedConversationId
-          : null) ?? pickFallbackConversationId(normalizedItems);
+        (urlId && normalizedItems.some((conversation) => conversation.id === urlId)
+          ? urlId
+          : storedConversationId && normalizedItems.some((conversation) => conversation.id === storedConversationId)
+            ? storedConversationId
+            : null) ?? pickFallbackConversationId(normalizedItems);
       setSelectedConversationId(nextSelectedConversationId);
+      // Clear URL param after selection
+      if (urlId && typeof window !== "undefined") {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load conversation history";
       toast.error(message);
@@ -684,6 +694,19 @@ function ImagePageContent({ isAdmin }: { isAdmin: boolean }) {
       }
     };
   }, [loadHistory]);
+
+  // Listen for example prompt clicks from ImageResults
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === "string" && detail) {
+        setImagePrompt(detail);
+        textareaRef.current?.focus();
+      }
+    };
+    window.addEventListener("image-example-prompt", handler);
+    return () => window.removeEventListener("image-example-prompt", handler);
+  }, [setImagePrompt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -881,6 +904,8 @@ function ImagePageContent({ isAdmin }: { isAdmin: boolean }) {
     conversationsRef.current = nextConversations;
     setConversations(nextConversations);
     await saveImageConversation(conversation);
+    // Refresh sidebar history
+    (window as any).__refreshSidebarImageConversations?.();
   };
 
   const updateConversation = useCallback(

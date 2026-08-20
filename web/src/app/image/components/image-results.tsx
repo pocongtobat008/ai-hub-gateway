@@ -121,25 +121,73 @@ export function ImageResults({
   };
 
   if (!selectedConversation) {
+    const examplePrompts = [
+      {
+        prompt: "A serene Japanese garden with a koi pond, cherry blossoms, and a wooden bridge at golden hour",
+        gradient: "from-pink-300 via-rose-200 to-orange-200",
+        emoji: "🌸",
+      },
+      {
+        prompt: "A cyberpunk cityscape at night with neon signs, flying cars, and rain-soaked streets",
+        gradient: "from-violet-400 via-purple-300 to-cyan-200",
+        emoji: "🌃",
+      },
+      {
+        prompt: "A majestic dragon perched on a mountain cliff, breathing fire into a stormy sky",
+        gradient: "from-orange-300 via-red-200 to-yellow-200",
+        emoji: "🐉",
+      },
+      {
+        prompt: "A cozy coffee shop interior with warm lighting, bookshelves, and rain on the windows",
+        gradient: "from-amber-200 via-yellow-100 to-orange-100",
+        emoji: "☕",
+      },
+      {
+        prompt: "An astronaut floating in space with Earth reflected in the visor, stars everywhere",
+        gradient: "from-blue-300 via-indigo-200 to-slate-200",
+        emoji: "🚀",
+      },
+      {
+        prompt: "A watercolor painting of a Mediterranean village with blue domes overlooking the sea",
+        gradient: "from-cyan-200 via-blue-100 to-white",
+        emoji: "🏖️",
+      },
+    ];
+
     return (
-      <div className="flex h-full min-h-[260px] items-center justify-center text-center sm:min-h-[420px]">
-        <div className="w-full max-w-4xl">
-          <h1
-            className="text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl md:text-5xl"
-            style={{
-              fontFamily: '"Palatino Linotype","Book Antiqua","URW Palladio L","Times New Roman",serif',
-            }}
-          >
-            Turn ideas into images
+      <div className="flex h-full min-h-[260px] items-center justify-center sm:min-h-[420px]">
+        <div className="w-full max-w-2xl px-4">
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
+            What will you create?
           </h1>
-          <p
-            className="mx-auto mt-3 max-w-[280px] text-sm italic tracking-[0.01em] text-stone-500 sm:mt-4 sm:max-w-none sm:text-[15px]"
-            style={{
-              fontFamily: '"Palatino Linotype","Book Antiqua","URW Palladio L","Times New Roman",serif',
-            }}
-          >
-            Keep your local history and task status in the same window, and start new stateless edits from existing result images.
+          <p className="mt-2 text-center text-sm text-stone-500">
+            Describe an image or pick a prompt below to get started
           </p>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {examplePrompts.map((example) => (
+              <button
+                key={example.prompt}
+                type="button"
+                onClick={() => {
+                  // Set the prompt in the composer
+                  const event = new CustomEvent("image-example-prompt", { detail: example.prompt });
+                  window.dispatchEvent(event);
+                }}
+                className="group relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] dark:border-white/10 dark:bg-stone-900"
+              >
+                <div className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${example.gradient}`}>
+                  <span className="text-4xl opacity-80 transition-transform duration-200 group-hover:scale-110">
+                    {example.emoji}
+                  </span>
+                </div>
+                <div className="px-3 py-2.5">
+                  <p className="line-clamp-2 text-[11px] leading-4 text-stone-600 dark:text-stone-400">
+                    {example.prompt}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
