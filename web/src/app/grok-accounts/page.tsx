@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clipboard, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clipboard, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,9 @@ function GrokAccountsContent() {
   const [isResetting, setIsResetting] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [page, setPage] = useState(1);
   const didLoadRef = useRef(false);
+  const PER_PAGE = 15;
 
   const loadAccounts = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -224,6 +226,17 @@ function GrokAccountsContent() {
     }
   };
 
+  // Sort newest first
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return db - da;
+  });
+  const pageCount = Math.max(1, Math.ceil(sortedAccounts.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const startIdx = (safePage - 1) * PER_PAGE;
+  const pagedAccounts = sortedAccounts.slice(startIdx, startIdx + PER_PAGE);
+
   const handleResetAll = async () => {
     setIsResetting(true);
     try {
@@ -333,7 +346,7 @@ function GrokAccountsContent() {
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {accounts.map((account) => {
+          {pagedAccounts.map((account) => {
             const meta = STATUS_META[account.status] || STATUS_META.normal;
             const hasApiKey = !!account.api_key_masked;
             return (
@@ -358,11 +371,11 @@ function GrokAccountsContent() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Button variant="ghost" size="icon" className="size-8" onClick={() => void handleTest(account)} disabled={testingId === account.id} title="Test">
-                        {testingId === account.id ? <LoaderCircle className="size-4 animate-spin" /> : <PlugZap className="size-4" />}
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8 px-3 text-xs" onClick={() => void handleTest(account)} disabled={testingId === account.id} title="Test">
+                        {testingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <PlugZap className="size-3" />} Test
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id || testingId === account.id} title="Refresh">
-                        <RefreshCw className={`size-4 ${refreshingId === account.id ? "animate-spin" : ""}`} />
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8 px-3 text-xs" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id || testingId === account.id} title="Refresh">
+                        {refreshingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Refresh
                       </Button>
                       <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(account)} title="Edit"><Pencil className="size-4" /></Button>
                       <Button variant="ghost" size="icon" className="size-8 text-rose-500 hover:text-rose-600" onClick={() => setDeleteConfirm(account)} title="Delete"><Trash2 className="size-4" /></Button>
@@ -372,6 +385,33 @@ function GrokAccountsContent() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-sm text-stone-500 dark:text-stone-400">
+            Page {safePage} / {pageCount} ({sortedAccounts.length} accounts)
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={safePage >= pageCount}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
       )}
 

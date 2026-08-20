@@ -174,7 +174,7 @@ function AccountsPageContent() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">("all");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState("10");
+  const [pageSize, setPageSize] = useState("15");
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [editStatus, setEditStatus] = useState<AccountStatus>("normal");
   const [editProxy, setEditProxy] = useState("");
@@ -249,12 +249,18 @@ function AccountsPageContent() {
 
   const filteredAccounts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return accounts.filter((account) => {
+    const filtered = accounts.filter((account) => {
       const searchMatched =
         normalizedQuery.length === 0 || (account.email ?? "").toLowerCase().includes(normalizedQuery);
       const typeMatched = typeFilter === "all" || displayAccountType(account) === typeFilter;
       const statusMatched = statusFilter === "all" || account.status === statusFilter;
       return searchMatched && typeMatched && statusMatched;
+    });
+    // Sort newest first
+    return filtered.sort((a, b) => {
+      const da = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+      const db = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+      return db - da;
     });
   }, [accounts, query, statusFilter, typeFilter]);
 
@@ -1239,6 +1245,7 @@ function AccountsPageContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="10">10 / page</SelectItem>
+                    <SelectItem value="15">15 / page</SelectItem>
                     <SelectItem value="20">20 / page</SelectItem>
                     <SelectItem value="50">50 / page</SelectItem>
                     <SelectItem value="100">100 / page</SelectItem>

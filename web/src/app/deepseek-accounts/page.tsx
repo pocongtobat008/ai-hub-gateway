@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,9 @@ function DeepSeekAccountsContent() {
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const didLoadRef = useRef(false);
+  const PER_PAGE = 15;
 
   const loadAccounts = useCallback(async (silent = false) => {
     if (!silent) {
@@ -179,6 +181,16 @@ function DeepSeekAccountsContent() {
     }
   };
 
+  // Sort newest first
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return db - da;
+  });
+  const pageCount = Math.max(1, Math.ceil(sortedAccounts.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const startIdx = (safePage - 1) * PER_PAGE;
+  const pagedAccounts = sortedAccounts.slice(startIdx, startIdx + PER_PAGE);
   const usableCount = accounts.filter((account) => account.status === "normal").length;
 
   const handleRefreshOne = async (account: DeepSeekAccount) => {
@@ -296,7 +308,7 @@ function DeepSeekAccountsContent() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {accounts.map((account) => {
+          {pagedAccounts.map((account) => {
             const meta = STATUS_META[account.status] || STATUS_META.normal;
             const hasError = Boolean(account.last_error) && account.status !== "normal";
             return (
@@ -341,14 +353,12 @@ function DeepSeekAccountsContent() {
                       Test
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
+                      variant="outline"
+                      className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs text-stone-700"
                       onClick={() => void handleRefreshOne(account)}
                       disabled={refreshingId === account.id || testingId === account.id}
-                      title="Refresh"
                     >
-                      <RefreshCw className={`size-4 ${refreshingId === account.id ? "animate-spin" : ""}`} />
+                      {refreshingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Refresh
                     </Button>
                     <Button
                       variant="outline"
@@ -369,6 +379,33 @@ function DeepSeekAccountsContent() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-sm text-stone-500">
+            Page {safePage} / {pageCount} ({sortedAccounts.length} accounts)
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={safePage >= pageCount}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
       )}
 

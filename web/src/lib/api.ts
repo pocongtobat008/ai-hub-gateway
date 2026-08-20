@@ -255,6 +255,8 @@ export type GrokAccount = {
   label?: string;
   proxy?: string;
   status: "normal" | "rate_limited" | "abnormal" | "disabled";
+  api_key_masked?: string;
+  cookie_count?: number;
   success?: number;
   fail?: number;
   invalid_count?: number;
