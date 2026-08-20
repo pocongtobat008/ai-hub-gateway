@@ -120,7 +120,7 @@ function GrokAccountsContent() {
     setIsSaving(true);
     try {
       if (form.authMethod === "api_key") {
-        const key = form.api_key || form.apiKey;
+        const key = form.apiKey;
         if (!editing && !key.trim()) {
           toast.error("API key is required"); setIsSaving(false); return;
         }
@@ -144,7 +144,7 @@ function GrokAccountsContent() {
         }
         if (editing) {
           const updates: Record<string, unknown> = {};
-          if (cookies["sso"]) updates.cookies = cookies;
+          if (cookies["sso"]) updates.sso = cookies["sso"];
           if (form.label !== undefined) updates.label = form.label.trim();
           if (form.proxy !== undefined) updates.proxy = form.proxy.trim();
           const data = await updateGrokAccount(editing.id, updates);

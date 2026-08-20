@@ -70,12 +70,12 @@ async function getAntiSlopPrompt(): Promise<string> {
     const authKey = await getStoredAuthKey();
     const baseUrl = webConfig.apiUrl.replace(/\/$/, "");
     const res = await fetch(`${baseUrl}/api/antislop/rules`, {
-      headers: { Authorization: `Bearer ${authKey}` },
+      headers: { Authorization: `Bearer ${authKey || ''}` },
     });
     if (res.ok) {
       const data = await res.json();
       if (data.ok && data.prompt) {
-        antiSlopCache = data.prompt;
+        antiSlopCache = String(data.prompt);
         return antiSlopCache;
       }
     }

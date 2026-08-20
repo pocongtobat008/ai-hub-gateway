@@ -745,7 +745,7 @@ export async function fetchGrokStatus() {
 }
 
 export async function testGrok(input: { account_id?: string; api_key?: string; access_token?: string; refresh_token?: string; cookies?: Record<string, string> | string; proxy?: string }) {
-  return httpRequest<{ result: { ok: boolean; error: string; name?: string } }>("/api/grok/test", {
+  return httpRequest<{ result: { ok: boolean; error: string; name?: string; models?: string[] } }>("/api/grok/test", {
     method: "POST",
     body: input,
   });
@@ -768,7 +768,9 @@ export async function fetchGrokAccounts() {
 }
 
 export async function createGrokAccount(input: {
-  sso: string;
+  sso?: string;
+  api_key?: string;
+  cookies?: Record<string, string>;
   label?: string;
   proxy?: string;
 }) {
@@ -782,6 +784,8 @@ export async function updateGrokAccount(
   id: string,
   input: Partial<{
     sso: string;
+    api_key: string;
+    cookies: Record<string, string>;
     label: string;
     proxy: string;
     status: string;

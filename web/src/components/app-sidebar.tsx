@@ -431,7 +431,7 @@ export function AppSidebar({
     const fetchCounts = async () => {
       try {
         const authKey = typeof window !== "undefined" ? localStorage.getItem("chatgpt2api_auth_key") || "" : "";
-        const headers = authKey ? { Authorization: `Bearer ${authKey}` } : {};
+        const headers: Record<string, string> = authKey ? { Authorization: `Bearer ${authKey}` } : {};
         const baseUrl = typeof window !== "undefined" ? (window as any).__NEXT_DATA__?.props?.pageProps?.apiUrl || "" : "";
         const urls: Record<string, string> = {
           gpt: "/api/accounts",
