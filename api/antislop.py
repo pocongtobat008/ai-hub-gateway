@@ -20,8 +20,17 @@ def _read_skill(name: str) -> str:
     return ""
 
 
-def _build_antislop_prompt(skills: list[str] | None = None) -> str:
-    """Build the anti-slop system prompt from core + selected skills."""
+def _build_antislop_prompt(skills: list[str] | None = None, full: bool = False) -> str:
+    """Build the anti-slop system prompt.
+    
+    By default returns the concise version (~1KB) for chat injection.
+    Use full=True for the complete rules (~45KB) for audit mode.
+    """
+    if not full:
+        concise = _read_skill("concise-rules.md")
+        if concise:
+            return concise
+    
     core = _read_skill("core.md") or _read_skill("antislop/SKILL.md")
     if not core:
         return "Anti-slop rules could not be loaded."
@@ -63,14 +72,21 @@ def create_router() -> APIRouter:
     router = APIRouter(prefix="/api/antislop", tags=["antislop"])
 
     @router.get("/rules")
-    async def get_rules(skills: str = "") -> dict[str, Any]:
-        """Get anti-slop rules. Optional comma-separated skills: ui, copywriting, human, mobile, code."""
+    async def get_rules(skills: str = "", full: bool = False) -> dict[str, Any]:
+        """Get anti-slop rules.
+        
+        By default returns concise version for chat injection.
+        Use full=true for complete rules.
+        Optional comma-separated skills: ui, copywriting, human, mobile, code.
+        """
         skill_list = [s.strip() for s in skills.split(",") if s.strip()] if skills else None
-        prompt = _build_antislop_prompt(skill_list)
+        prompt = _build_antislop_prompt(skill_list, full=full)
         return {
             "ok": True,
             "prompt": prompt,
-            "core_lines": len((_read_skill("core.md") or "").splitlines()),
+            "lines": len(prompt.splitlines()),
+            "chars": len(prompt),
+            "mode": "full" if full else "concise",
             "available_skills": ["ui", "copywriting", "human", "mobile", "code"],
         }
 

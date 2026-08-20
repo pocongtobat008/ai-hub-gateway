@@ -82,7 +82,20 @@ async function getAntiSlopPrompt(): Promise<string> {
   } catch {
     // ignore
   }
-  return "Follow anti-slop design rules: avoid generic AI patterns, ensure purpose-driven design, maintain liveliness.";
+  // Fallback: concise rules inline
+  return `# Anti-Slop Active
+
+Follow these rules strictly:
+1. No decoration without purpose — every visual element must solve a problem
+2. No AI-typical patterns — no "Empower your...", no "Seamless...", no "Revolutionize..."
+3. No fake metrics — never invent stats or percentages
+4. No generic icons — use specific icons that match the content
+5. No placeholder content — real copy, real data, real examples
+6. Vary sentence rhythm — mix short and long sentences
+7. Use concrete language — "Users click" not "The button is clicked"
+8. Show, don't tell — demonstrate capability, don't claim it
+9. No buzzwords — avoid: leverage, utilize, streamline, empower, revolutionize
+10. Active voice — "We built this" not "This was built by us"`;
 }
 
 export async function streamChatCompletion(options: StreamOptions): Promise<StreamResult> {
