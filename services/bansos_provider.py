@@ -126,7 +126,19 @@ class BansosProvider:
             except Exception:
                 pass
             raise RuntimeError(error)
-        return resp.json()
+        data = resp.json()
+        # Handle reasoning models that return content=null but reasoning present
+        self._normalize_content(data)
+        return data
+
+    def _normalize_content(self, data: dict[str, Any]) -> None:
+        """Fix reasoning models that return content=null but have reasoning."""
+        for choice in data.get("choices", []):
+            msg = choice.get("message", {})
+            if msg.get("content") is None or msg.get("content") == "":
+                reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
+                if reasoning:
+                    msg["content"] = reasoning
 
     def _stream(self, base_url: str, messages: list[dict[str, Any]], model: str) -> Iterator[dict[str, Any]]:
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
