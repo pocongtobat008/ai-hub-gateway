@@ -9,7 +9,7 @@ import { PageTransition } from "@/components/page-transition";
 import { getValidatedAuthSession } from "@/lib/auth-session";
 import { type StoredAuthSession } from "@/store/auth";
 import type { ChatConversation } from "@/store/chat-conversations";
-import { listImageConversations, type ImageConversation } from "@/store/image-conversations";
+import type { ImageConversation } from "@/store/image-conversations";
 
 // ── Context to share conversation data from chat page to sidebar ─────────────
 
@@ -69,11 +69,12 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
   });
   const [imageConversations, setImageConversations] = useState<ImageConversation[]>([]);
 
-  // Load image conversations
+  // Load image conversations (dynamic import to avoid SSR crash with localforage)
   useEffect(() => {
     let active = true;
     const load = async () => {
       try {
+        const { listImageConversations } = await import("@/store/image-conversations");
         const items = await listImageConversations();
         if (active) setImageConversations(items);
       } catch { /* ignore */ }
@@ -87,6 +88,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (window as any).__refreshSidebarImageConversations = async () => {
       try {
+        const { listImageConversations } = await import("@/store/image-conversations");
         const items = await listImageConversations();
         setImageConversations(items);
       } catch { /* ignore */ }
