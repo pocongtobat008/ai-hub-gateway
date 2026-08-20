@@ -124,69 +124,127 @@ export function ImageResults({
     const examplePrompts = [
       {
         prompt: "A serene Japanese garden with a koi pond, cherry blossoms, and a wooden bridge at golden hour",
-        gradient: "from-pink-300 via-rose-200 to-orange-200",
-        emoji: "🌸",
+        gradient: "from-pink-400 via-rose-300 to-orange-200",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Nature",
       },
       {
         prompt: "A cyberpunk cityscape at night with neon signs, flying cars, and rain-soaked streets",
-        gradient: "from-violet-400 via-purple-300 to-cyan-200",
-        emoji: "🌃",
+        gradient: "from-violet-500 via-purple-400 to-cyan-300",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Sci-Fi",
       },
       {
         prompt: "A majestic dragon perched on a mountain cliff, breathing fire into a stormy sky",
-        gradient: "from-orange-300 via-red-200 to-yellow-200",
-        emoji: "🐉",
+        gradient: "from-orange-400 via-red-300 to-yellow-200",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Fantasy",
       },
       {
         prompt: "A cozy coffee shop interior with warm lighting, bookshelves, and rain on the windows",
-        gradient: "from-amber-200 via-yellow-100 to-orange-100",
-        emoji: "☕",
+        gradient: "from-amber-300 via-yellow-200 to-orange-100",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Interior",
       },
       {
         prompt: "An astronaut floating in space with Earth reflected in the visor, stars everywhere",
-        gradient: "from-blue-300 via-indigo-200 to-slate-200",
-        emoji: "🚀",
+        gradient: "from-blue-400 via-indigo-300 to-slate-200",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Space",
       },
       {
         prompt: "A watercolor painting of a Mediterranean village with blue domes overlooking the sea",
-        gradient: "from-cyan-200 via-blue-100 to-white",
-        emoji: "🏖️",
+        gradient: "from-cyan-300 via-blue-200 to-white",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Travel",
+      },
+      {
+        prompt: "A professional product photo of a sleek modern smartwatch on a marble surface with dramatic lighting",
+        gradient: "from-stone-300 via-gray-200 to-slate-100",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Product",
+      },
+      {
+        prompt: "A minimalist logo design for an AI startup, geometric shapes, clean lines, gradient from teal to purple",
+        gradient: "from-teal-400 via-emerald-300 to-purple-300",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Design",
+      },
+      {
+        prompt: "A cozy reading nook with fairy lights, stacked books, a steaming mug, and a tabby cat sleeping on a cushion",
+        gradient: "from-yellow-300 via-amber-200 to-orange-100",
+        icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        category: "Cozy",
       },
     ];
 
     return (
       <div className="flex h-full min-h-[260px] items-center justify-center sm:min-h-[420px]">
-        <div className="w-full max-w-2xl px-4">
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
-            What will you create?
-          </h1>
-          <p className="mt-2 text-center text-sm text-stone-500">
-            Describe an image or pick a prompt below to get started
-          </p>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="w-full max-w-3xl px-4">
+          {/* Hero */}
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-3xl bg-gradient-to-br from-stone-800 to-stone-950 shadow-lg dark:from-stone-200 dark:to-stone-400">
+              <svg className="size-8 text-white dark:text-stone-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 0 0 1.5-1.5V4.5a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v15a1.5 1.5 0 0 0 1.5 1.5Zm4.5-7.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl dark:text-stone-100">
+              What will you create?
+            </h1>
+            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+              Describe an image in detail, or start from one of these examples
+            </p>
+          </div>
+
+          {/* Category filter chips */}
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
+            {["All", "Nature", "Sci-Fi", "Fantasy", "Product", "Design"].map((cat) => (
+              <span
+                key={cat}
+                className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600 transition-all hover:bg-stone-50 hover:shadow-sm cursor-default dark:border-white/10 dark:bg-stone-900 dark:text-stone-400"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+
+          {/* Example grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {examplePrompts.map((example) => (
               <button
                 key={example.prompt}
                 type="button"
                 onClick={() => {
-                  // Set the prompt in the composer
                   const event = new CustomEvent("image-example-prompt", { detail: example.prompt });
                   window.dispatchEvent(event);
                 }}
-                className="group relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] dark:border-white/10 dark:bg-stone-900"
+                className="group relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 active:scale-[0.97] dark:border-white/10 dark:bg-stone-900 dark:hover:shadow-stone-900/50"
               >
-                <div className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${example.gradient}`}>
-                  <span className="text-4xl opacity-80 transition-transform duration-200 group-hover:scale-110">
-                    {example.emoji}
-                  </span>
+                <div className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${example.gradient} overflow-hidden`}>                  
+                  <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
+                  <svg className="relative size-10 text-white/60 transition-all duration-300 group-hover:scale-110 group-hover:text-white/80" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                  </svg>
+                  <div className="absolute top-2 left-2">
+                    <span className="rounded-full bg-black/20 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {example.category}
+                    </span>
+                  </div>
                 </div>
                 <div className="px-3 py-2.5">
-                  <p className="line-clamp-2 text-[11px] leading-4 text-stone-600 dark:text-stone-400">
+                  <p className="line-clamp-2 text-[11px] leading-[1.4] text-stone-600 dark:text-stone-400">
                     {example.prompt}
                   </p>
                 </div>
               </button>
             ))}
+          </div>
+
+          {/* Tips */}
+          <div className="mt-8 text-center">
+            <p className="text-[11px] text-stone-400 dark:text-stone-500">
+              Tip: Be specific about style, lighting, and composition for best results
+            </p>
           </div>
         </div>
       </div>
