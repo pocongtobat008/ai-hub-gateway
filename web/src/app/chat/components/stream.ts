@@ -18,6 +18,7 @@ type StreamOptions = {
   reasoningEffort?: string;
   gem?: string;
   accountId?: string;
+  tool?: string;
   signal?: AbortSignal;
   onDelta: (text: string) => void;
 };
@@ -60,16 +61,47 @@ function extractErrorMessage(payload: unknown): string {
 // System context message to maximize model understanding
 const SYSTEM_CONTEXT = `You are an AI assistant powered by BecomeAI. You have access to the full conversation history above. Always maintain context from previous messages when responding. If the user refers to something from earlier in the conversation, use that context to provide accurate and relevant responses. Be helpful, concise, and maintain a natural conversational flow.`;
 
+// Cache for anti-slop rules to avoid repeated fetches
+let antiSlopCache: string | null = null;
+
+async function getAntiSlopPrompt(): Promise<string> {
+  if (antiSlopCache) return antiSlopCache;
+  try {
+    const authKey = await getStoredAuthKey();
+    const baseUrl = webConfig.apiUrl.replace(/\/$/, "");
+    const res = await fetch(`${baseUrl}/api/antislop/rules`, {
+      headers: { Authorization: `Bearer ${authKey}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok && data.prompt) {
+        antiSlopCache = data.prompt;
+        return antiSlopCache;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return "Follow anti-slop design rules: avoid generic AI patterns, ensure purpose-driven design, maintain liveliness.";
+}
+
 export async function streamChatCompletion(options: StreamOptions): Promise<StreamResult> {
-  const { model, messages, reasoningEffort, gem, accountId, signal, onDelta } = options;
+  const { model, messages, reasoningEffort, gem, accountId, tool, signal, onDelta } = options;
   const authKey = await getStoredAuthKey();
   const baseUrl = webConfig.apiUrl.replace(/\/$/, "");
+
+  // Build system message: inject anti-slop rules if tool is selected
+  let systemContent = SYSTEM_CONTEXT;
+  if (tool === "anti-slop") {
+    const antislop = await getAntiSlopPrompt();
+    systemContent = `${SYSTEM_CONTEXT}\n\n---\n\n${antislop}`;
+  }
 
   // Prepend system context message if not already present
   const hasSystemMessage = messages.length > 0 && messages[0].role === "system";
   const messagesWithContext = hasSystemMessage
     ? messages
-    : [{ role: "system" as const, content: SYSTEM_CONTEXT }, ...messages];
+    : [{ role: "system" as const, content: systemContent }, ...messages];
 
   let response: Response;
   try {

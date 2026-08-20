@@ -316,7 +316,7 @@ function ChatPageContent() {
     }
     const storedTool =
       typeof window !== "undefined" ? window.localStorage.getItem(CHAT_TOOL_STORAGE_KEY) : null;
-    if (storedTool === "image" || storedTool === "canvas" || storedTool === "infinite-canvas" || storedTool === "video" || storedTool === "research") {
+    if (storedTool === "image" || storedTool === "canvas" || storedTool === "infinite-canvas" || storedTool === "video" || storedTool === "research" || storedTool === "anti-slop") {
       setTool(storedTool);
     }
   }, []);
@@ -533,6 +533,7 @@ function ChatPageContent() {
         reasoningEffort,
         gem: isGeminiModel ? gem : undefined,
         accountId: isGeminiModel ? accountId : undefined,
+        tool: tool !== "auto" ? tool : undefined,
         signal: controller.signal,
         onDelta: (text) => {
           accumulated += text;
@@ -712,7 +713,7 @@ function ChatPageContent() {
     setImages([]);
     await persistConversation(baseConversation);
 
-    if (tool !== "auto") {
+    if (tool !== "auto" && tool !== "anti-slop") {
       void runTool(conversationId, assistantMessage.id, text || "Generate", images);
     } else {
       void runStream(conversationId, assistantMessage.id, baseConversation.messages);

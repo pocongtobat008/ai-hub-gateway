@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Square, Wand2, X } from "lucide-react";
+import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Shield, Square, Wand2, X } from "lucide-react";
 import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,7 +30,7 @@ export type ComposerAccount = {
   name: string;
 };
 
-export type ComposerTool = "auto" | "image" | "canvas" | "infinite-canvas" | "video" | "research";
+export type ComposerTool = "auto" | "image" | "canvas" | "infinite-canvas" | "video" | "research" | "anti-slop";
 
 export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: React.ElementType; desc: string }> = [
   { value: "auto", label: "Auto", icon: Atom, desc: "Let AI decide the best model" },
@@ -39,6 +39,7 @@ export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: Rea
   { value: "infinite-canvas", label: "Infinite Canvas", icon: Box, desc: "Unlimited creative workspace" },
   { value: "video", label: "Video", icon: Clapperboard, desc: "Generate video with Veo" },
   { value: "research", label: "Research", icon: Wand2, desc: "Deep research with Gemini" },
+  { value: "anti-slop", label: "Anti-Slop", icon: Shield, desc: "Apply anti-slop design rules" },
 ];
 
 type ChatComposerProps = {
