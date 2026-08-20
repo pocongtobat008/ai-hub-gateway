@@ -53,6 +53,7 @@ const accountNav: NavItem[] = [
   { href: "/grok-accounts", label: "Grok", icon: Zap },
   { href: "/manus-accounts", label: "Manus", icon: Bot },
   { href: "/custom-accounts", label: "Custom / Local", icon: Globe },
+  { href: "/bansos-accounts", label: "Bansos (Free)", icon: Sparkles },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 

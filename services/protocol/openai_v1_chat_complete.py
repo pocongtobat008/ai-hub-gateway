@@ -12,6 +12,7 @@ from services.gemini_provider import is_gemini_model
 from services.grok_provider import is_grok_model
 from services.manus_provider import is_manus_model
 from services.custom_provider import is_custom_model
+from services.bansos_provider import is_bansos_model
 from services.protocol.conversation import (
     ConversationRequest,
     ImageOutput,
@@ -311,6 +312,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
         if is_custom_model(model):
             from services.protocol.custom_chat import custom_chat_events
             return custom_chat_events(body)
+        if is_bansos_model(model):
+            from services.protocol.bansos_chat import bansos_chat_events
+            return bansos_chat_events(body)
         if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
             return stream_web_search_chat_completion(messages, model)
         thinking_effort = thinking_effort_from_body(body)
@@ -336,6 +340,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
     if is_custom_model(model):
         from services.protocol.custom_chat import custom_chat_response
         return custom_chat_response(body)
+    if is_bansos_model(model):
+        from services.protocol.bansos_chat import bansos_chat_response
+        return bansos_chat_response(body)
     if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
         return web_search_chat_response(messages, model)
     thinking_effort = thinking_effort_from_body(body)

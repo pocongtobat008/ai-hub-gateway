@@ -1395,3 +1395,44 @@ export async function testAllCustom() {
 export async function resetCustomAccounts() {
   return httpRequest<{ ok: boolean; reset: number }>("/api/custom/reset", { method: "POST" });
 }
+
+// ─── Bansos (Free Keyless Models) ─────────────────────────────────
+
+export type BansosAccount = {
+  id: string;
+  label?: string;
+  daemon_url: string;
+  models: string[];
+  status: "normal" | "abnormal";
+  last_error?: string | null;
+  created_at?: string;
+  last_used_at?: string | null;
+};
+
+export async function fetchBansosAccounts() {
+  return httpRequest<{ accounts: BansosAccount[] }>("/api/bansos/accounts");
+}
+
+export async function fetchBansosModels() {
+  return httpRequest<{ models: string[] }>("/api/bansos/available-models");
+}
+
+export async function createBansosAccount(input: { daemon_url: string; models: string[]; label?: string }) {
+  return httpRequest<BansosAccount>("/api/bansos/accounts", { method: "POST", body: input });
+}
+
+export async function deleteBansosAccount(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/bansos/accounts/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function testBansos(input: { account_id?: string }) {
+  return httpRequest<{ ok: boolean; error?: string }>("/api/bansos/test", { method: "POST", body: input });
+}
+
+export async function testAllBansos() {
+  return httpRequest<{ ok: boolean; total: number; passed: number; failed: number }>("/api/bansos/test-all", { method: "POST" });
+}
+
+export async function resetBansosAccounts() {
+  return httpRequest<{ ok: boolean; reset: number }>("/api/bansos/reset", { method: "POST" });
+}
