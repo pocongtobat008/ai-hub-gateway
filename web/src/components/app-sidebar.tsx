@@ -37,7 +37,7 @@ import {
 import type { ChatConversation } from "@/store/chat-conversations";
 import type { ImageConversation } from "@/store/image-conversations";
 
-type NavItem = { href: string; label: string; icon: React.ElementType };
+type NavItem = { href: string; label: string; icon: React.ElementType; badgeKey?: string };
 
 const mainNav: NavItem[] = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
@@ -47,13 +47,13 @@ const mainNav: NavItem[] = [
 ];
 
 const accountNav: NavItem[] = [
-  { href: "/accounts", label: "GPT Accounts", icon: Cog },
-  { href: "/gemini-accounts", label: "Gemini Accounts", icon: Gem },
-  { href: "/deepseek-accounts", label: "DeepSeek", icon: Atom },
-  { href: "/grok-accounts", label: "Grok", icon: Zap },
-  { href: "/manus-accounts", label: "Manus", icon: Bot },
-  { href: "/custom-accounts", label: "Custom / Local", icon: Globe },
-  { href: "/bansos-accounts", label: "Bansos (Free)", icon: Sparkles },
+  { href: "/accounts", label: "GPT Accounts", icon: Cog, badgeKey: "gpt" },
+  { href: "/gemini-accounts", label: "Gemini", icon: Gem, badgeKey: "gemini" },
+  { href: "/deepseek-accounts", label: "DeepSeek", icon: Atom, badgeKey: "deepseek" },
+  { href: "/grok-accounts", label: "Grok", icon: Zap, badgeKey: "grok" },
+  { href: "/manus-accounts", label: "Manus", icon: Bot, badgeKey: "manus" },
+  { href: "/custom-accounts", label: "Custom", icon: Globe, badgeKey: "custom" },
+  { href: "/bansos-accounts", label: "Bansos", icon: Sparkles, badgeKey: "bansos" },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 
@@ -84,13 +84,14 @@ function SidebarLink({
   pathname,
   collapsed,
   index,
+  badgeCount,
 }: {
   item: NavItem;
   pathname: string;
   collapsed: boolean;
   index?: number;
+  badgeCount?: number;
 }) {
-  // Exact match only — no startsWith to avoid /gemini matching /gemini-accounts
   const active = pathname === item.href;
   const Icon = item.icon;
 
@@ -108,7 +109,20 @@ function SidebarLink({
       style={{ animationDelay: `${(index || 0) * 40}ms` }}
     >
       <Icon className={cn("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", active && "text-white dark:text-stone-900")} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+      {!collapsed && badgeCount !== undefined && badgeCount > 0 && (
+        <span className={cn(
+          "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold min-w-[18px]",
+          active
+            ? "bg-white/20 text-white dark:bg-stone-900/20 dark:text-stone-900"
+            : "bg-stone-200 text-stone-600 dark:bg-white/10 dark:text-stone-400",
+        )}>
+          {badgeCount}
+        </span>
+      )}
+      {collapsed && badgeCount !== undefined && badgeCount > 0 && (
+        <div className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-stone-50 dark:border-stone-950" />
+      )}
       {active && !collapsed && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 size-1 rounded-full bg-current animate-scale-in" />
       )}
@@ -410,6 +424,46 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+
+  // Fetch account counts for badges
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const authKey = typeof window !== "undefined" ? localStorage.getItem("chatgpt2api_auth_key") || "" : "";
+        const headers = authKey ? { Authorization: `Bearer ${authKey}` } : {};
+        const baseUrl = typeof window !== "undefined" ? (window as any).__NEXT_DATA__?.props?.pageProps?.apiUrl || "" : "";
+        const urls: Record<string, string> = {
+          gpt: "/api/accounts",
+          gemini: "/api/gemini/accounts",
+          deepseek: "/api/deepseek/accounts",
+          grok: "/api/grok/accounts",
+          manus: "/api/manus/accounts",
+          custom: "/api/custom/accounts",
+          bansos: "/api/bansos/accounts",
+        };
+        const counts: Record<string, number> = {};
+        const promises = Object.entries(urls).map(async ([key, url]) => {
+          try {
+            const res = await fetch(url, { headers });
+            if (res.ok) {
+              const data = await res.json();
+              counts[key] = Array.isArray(data.items) ? data.items.length : Array.isArray(data.accounts) ? data.accounts.length : 0;
+            }
+          } catch {
+            // ignore
+          }
+        });
+        await Promise.all(promises);
+        setBadgeCounts(counts);
+      } catch {
+        // ignore
+      }
+    };
+    void fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
   const roleLabel = session.role === "admin" ? "Admin" : "User";
   const displayName = session.name.trim() || roleLabel;
   const formatTime = formatConversationTime || ((v: string) => {
@@ -492,7 +546,7 @@ export function AppSidebar({
               Accounts
             </div>
             {accountNav.map((item, i) => (
-              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
+              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} badgeCount={item.badgeKey ? badgeCounts[item.badgeKey] : undefined} />
             ))}
           </nav>
         )}
@@ -501,7 +555,7 @@ export function AppSidebar({
         {collapsed && (
           <nav className="space-y-0.5 px-2 pt-3">
             {[...accountNav, ...systemNav].map((item, i) => (
-              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} />
+              <SidebarLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} index={i} badgeCount={item.badgeKey ? badgeCounts[item.badgeKey] : undefined} />
             ))}
           </nav>
         )}
