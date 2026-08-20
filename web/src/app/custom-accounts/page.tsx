@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Clipboard, Globe, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, X, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clipboard, Globe, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -41,9 +41,7 @@ function CustomAccountsContent() {
   const [editing, setEditing] = useState<CustomAccount | null>(null);
   const [form, setForm] = useState({ baseUrl: "", apiKey: "", label: "", modelsText: "" });
   const [isSaving, setIsSaving] = useState(false);
-  const [isValidation, setIsValidation] = useState(false);
-  const [validatedModels, setValidatedModels] = useState<string[]>([]);
-  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
+  const [isFetching, setIsFetching] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<CustomAccount | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
@@ -75,8 +73,6 @@ function CustomAccountsContent() {
   const openAdd = () => {
     setEditing(null);
     setForm({ baseUrl: "", apiKey: "", label: "", modelsText: "" });
-    setValidatedModels([]);
-    setSelectedModels(new Set());
     setDialogOpen(true);
   };
 
@@ -88,43 +84,31 @@ function CustomAccountsContent() {
       label: account.label || "",
       modelsText: (account.models || []).join("\n"),
     });
-    setValidatedModels([]);
-    setSelectedModels(new Set(account.models || []));
     setDialogOpen(true);
   };
 
-  const handleValidate = async () => {
+  const handleFetchModels = async () => {
     if (!form.baseUrl.trim()) {
       toast.error("Enter a base URL first");
       return;
     }
-    setIsValidation(true);
+    setIsFetching(true);
     try {
       const data = await validateCustomModels({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim() });
       if (data.ok && data.models.length > 0) {
-        setValidatedModels(data.models);
-        setSelectedModels(new Set(data.models));
-        toast.success(`Found ${data.models.length} models!`);
+        // Append fetched models to existing text (deduplicate)
+        const existing = form.modelsText.split("\n").map((m) => m.trim()).filter(Boolean);
+        const allModels = [...new Set([...existing, ...data.models])];
+        setForm({ ...form, modelsText: allModels.join("\n") });
+        toast.success(`Found ${data.models.length} models! Select the ones you want.`);
       } else {
-        toast.warning("No models found. Check the URL and API key.");
+        toast.warning("No models found. Check URL and API key, or type models manually.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Validation failed");
+      toast.error(error instanceof Error ? error.message : "Fetch failed");
     } finally {
-      setIsValidation(false);
+      setIsFetching(false);
     }
-  };
-
-  const toggleModel = (model: string) => {
-    setSelectedModels((prev) => {
-      const next = new Set(prev);
-      if (next.has(model)) {
-        next.delete(model);
-      } else {
-        next.add(model);
-      }
-      return next;
-    });
   };
 
   const handleSave = async () => {
@@ -132,31 +116,23 @@ function CustomAccountsContent() {
       toast.error("Base URL is required");
       return;
     }
+    const models = form.modelsText.split("\n").map((m) => m.trim()).filter(Boolean);
+    if (models.length === 0) {
+      toast.error("Add at least one model (one per line)");
+      return;
+    }
     setIsSaving(true);
     try {
-      const models = Array.from(selectedModels);
       if (editing) {
-        const updates: Record<string, unknown> = {};
-        if (form.label !== undefined) updates.label = form.label.trim();
-        if (models.length > 0) updates.models = models;
-        if (form.apiKey.trim()) updates.api_key = form.apiKey.trim();
-        await deleteCustomAccount(editing.id); // delete old, create new with updates
-        await createCustomAccount({
-          base_url: form.baseUrl.trim(),
-          api_key: form.apiKey.trim() || "",
-          models,
-          label: form.label.trim() || "",
-        });
-        toast.success("Account updated");
-      } else {
-        await createCustomAccount({
-          base_url: form.baseUrl.trim(),
-          api_key: form.apiKey.trim(),
-          models,
-          label: form.label.trim(),
-        });
-        toast.success("Account added");
+        await deleteCustomAccount(editing.id);
       }
+      await createCustomAccount({
+        base_url: form.baseUrl.trim(),
+        api_key: form.apiKey.trim(),
+        models,
+        label: form.label.trim() || "",
+      });
+      toast.success(editing ? "Account updated" : "Account added");
       setDialogOpen(false);
       await loadAccounts();
     } catch (error) {
@@ -241,7 +217,6 @@ function CustomAccountsContent() {
     }
   };
 
-  // Sort newest first
   const sortedAccounts = [...accounts].sort((a, b) => {
     const da = a.created_at ? new Date(a.created_at).getTime() : 0;
     const db = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -256,14 +231,14 @@ function CustomAccountsContent() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Custom Accounts</h1>
+          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Custom / Local Providers</h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Add any OpenAI-compatible API (Ollama, vLLM, LM Studio, local servers, etc.)
+            Add any OpenAI-compatible API — Ollama, vLLM, LM Studio, local servers, etc.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowHelp(!showHelp)} className="gap-1.5">
-            <Clipboard className="size-4" /> Setup Guide
+            <Clipboard className="size-4" /> Guide
           </Button>
           <Button variant="outline" size="sm" onClick={() => void handleRefreshAll()} disabled={isRefreshingAll || isResetting || accounts.length === 0} className="gap-1.5">
             <RefreshCw className={`size-4 ${isRefreshingAll ? "animate-spin" : ""}`} /> Refresh All
@@ -272,37 +247,28 @@ function CustomAccountsContent() {
             <RotateCcw className={`size-4 ${isResetting ? "animate-spin" : ""}`} /> Reset All
           </Button>
           <Button onClick={openAdd} size="sm" className="gap-1.5">
-            <Plus className="size-4" /> Add Account
+            <Plus className="size-4" /> Add Provider
           </Button>
         </div>
       </div>
 
       {showHelp && (
         <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
-          <CardContent className="p-4 text-sm space-y-3">
-            <div className="font-semibold text-blue-800 dark:text-blue-300">🔌 How to add a custom provider</div>
-            <ol className="list-decimal list-inside space-y-1 text-blue-700 dark:text-blue-400">
-              <li>Enter the <strong>Base URL</strong> of your API (e.g. <code>http://localhost:11434</code> for Ollama)</li>
-              <li>Enter the <strong>API Key</strong> (leave empty if not needed)</li>
-              <li>Click <strong>Validate Models</strong> to fetch available models</li>
-              <li>Select which models to register</li>
+          <CardContent className="p-4 text-sm space-y-2">
+            <div className="font-semibold text-blue-800 dark:text-blue-300">How to add a provider</div>
+            <ol className="list-decimal list-inside space-y-1 text-blue-700 dark:text-blue-400 text-xs">
+              <li>Enter the <strong>Base URL</strong> (e.g. <code>http://localhost:11434</code>)</li>
+              <li>Enter <strong>API Key</strong> if needed (leave empty if not)</li>
+              <li>Click <strong>Fetch Models</strong> or type models manually (one per line)</li>
               <li>Click <strong>Add</strong></li>
             </ol>
-            <div className="text-xs text-blue-600 dark:text-blue-500">
-              <strong>Supported:</strong> Ollama, vLLM, LM Studio, LocalAI, LiteLLM, FastChat, OpenWebUI, and any OpenAI-compatible API.
-            </div>
-            <div className="text-xs text-blue-600 dark:text-blue-500">
-              <strong>Example URLs:</strong>
-              <br />Ollama: <code>http://localhost:11434</code>
-              <br />LM Studio: <code>http://localhost:1234</code>
-              <br />vLLM: <code>http://localhost:8000</code>
-              <br />Remote: <code>https://your-server.com/api</code>
+            <div className="text-[11px] text-blue-600 dark:text-blue-500">
+              <strong>Examples:</strong> Ollama <code>localhost:11434</code> · LM Studio <code>localhost:1234</code> · vLLM <code>localhost:8000</code>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card><CardContent className="p-3 text-center">
           <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{accounts.length}</div>
@@ -318,7 +284,6 @@ function CustomAccountsContent() {
         </CardContent></Card>
       </div>
 
-      {/* Account list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><LoaderCircle className="size-5 animate-spin text-stone-400" /></div>
       ) : accounts.length === 0 ? (
@@ -326,7 +291,7 @@ function CustomAccountsContent() {
           <Globe className="mb-3 size-8 text-stone-300 dark:text-stone-600" />
           <div className="text-sm font-medium text-stone-600 dark:text-stone-400">No custom providers configured</div>
           <div className="mt-1 text-xs text-stone-400">Add an OpenAI-compatible endpoint to get started</div>
-          <Button onClick={openAdd} size="sm" className="mt-4 gap-1.5"><Plus className="size-4" /> Add Account</Button>
+          <Button onClick={openAdd} size="sm" className="mt-4 gap-1.5"><Plus className="size-4" /> Add Provider</Button>
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -338,30 +303,29 @@ function CustomAccountsContent() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{account.label || "Custom Provider"}</span>
+                        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{account.label || "Custom"}</span>
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${meta.className}`}>{meta.label}</span>
                       </div>
                       <div className="mt-1 font-mono text-[11px] text-stone-500 dark:text-stone-400 truncate">{account.base_url}</div>
-                      <div className="mt-1 font-mono text-[11px] text-stone-400">{account.api_key_masked || "No key"}</div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {(account.models || []).slice(0, 3).map((m) => (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(account.models || []).slice(0, 4).map((m) => (
                           <span key={m} className="inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-400">{m}</span>
                         ))}
-                        {(account.models || []).length > 3 && (
-                          <span className="text-[10px] text-stone-400">+{(account.models || []).length - 3} more</span>
+                        {(account.models || []).length > 4 && (
+                          <span className="text-[10px] text-stone-400">+{(account.models || []).length - 4}</span>
                         )}
                       </div>
                       {account.last_error && <div className="mt-1 text-[11px] text-rose-500 truncate">{account.last_error}</div>}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Button variant="outline" size="sm" className="gap-1.5 h-8 px-3 text-xs" onClick={() => void handleTest(account)} disabled={testingId === account.id}>
+                      <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => void handleTest(account)} disabled={testingId === account.id}>
                         {testingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <PlugZap className="size-3" />} Test
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5 h-8 px-3 text-xs" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id}>
-                        {refreshingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Refresh
+                      <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id}>
+                        {refreshingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(account)} title="Edit"><Pencil className="size-4" /></Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-rose-500 hover:text-rose-600" onClick={() => setDeleteConfirm(account)} title="Delete"><Trash2 className="size-4" /></Button>
+                      <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(account)}><Pencil className="size-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="size-7 text-rose-500 hover:text-rose-600" onClick={() => setDeleteConfirm(account)}><Trash2 className="size-3.5" /></Button>
                     </div>
                   </div>
                 </CardContent>
@@ -371,16 +335,13 @@ function CustomAccountsContent() {
         </div>
       )}
 
-      {/* Pagination */}
       {pageCount > 1 && (
         <div className="mt-4 flex items-center justify-center gap-3">
-          <Button variant="outline" size="icon" className="size-9" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
+          <Button variant="outline" size="icon" className="size-8" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="text-sm text-stone-500 dark:text-stone-400">
-            Page {safePage} / {pageCount} ({sortedAccounts.length} accounts)
-          </span>
-          <Button variant="outline" size="icon" className="size-9" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount}>
+          <span className="text-sm text-stone-500">{safePage} / {pageCount} ({sortedAccounts.length})</span>
+          <Button variant="outline" size="icon" className="size-8" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount}>
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -388,12 +349,10 @@ function CustomAccountsContent() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Account" : "Add Custom Provider"}</DialogTitle>
-            <DialogDescription>
-              Connect any OpenAI-compatible API endpoint.
-            </DialogDescription>
+            <DialogTitle>{editing ? "Edit Provider" : "Add Custom Provider"}</DialogTitle>
+            <DialogDescription>Connect any OpenAI-compatible API endpoint.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -404,7 +363,6 @@ function CustomAccountsContent() {
                 placeholder="http://localhost:11434"
                 className="font-mono text-xs"
               />
-              <p className="text-[11px] text-stone-400">The URL of your OpenAI-compatible API (without /v1/chat/completions)</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
@@ -417,72 +375,38 @@ function CustomAccountsContent() {
               />
             </div>
 
-            {/* Validate Models Button */}
+            {/* Fetch Models button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void handleValidate()}
-              disabled={isValidation || !form.baseUrl.trim()}
+              onClick={() => void handleFetchModels()}
+              disabled={isFetching || !form.baseUrl.trim()}
               className="gap-1.5"
             >
-              {isValidation ? <LoaderCircle className="size-4 animate-spin" /> : <Zap className="size-4" />}
-              Validate Models
+              {isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <Zap className="size-4" />}
+              Fetch Models from Server
             </Button>
 
-            {/* Validated Models */}
-            {validatedModels.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
-                  Available Models ({validatedModels.length})
-                </label>
-                <div className="max-h-40 overflow-y-auto rounded-lg border border-stone-200 p-2 dark:border-white/10">
-                  {validatedModels.map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      onClick={() => toggleModel(model)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
-                        selectedModels.has(model)
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                          : "text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <div className={`flex size-4 items-center justify-center rounded border ${
-                        selectedModels.has(model)
-                          ? "border-emerald-500 bg-emerald-500 text-white"
-                          : "border-stone-300 dark:border-stone-600"
-                      }`}>
-                        {selectedModels.has(model) && <Check className="size-3" />}
-                      </div>
-                      <span className="font-mono">{model}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] text-stone-400">{selectedModels.size} models selected</p>
-              </div>
-            )}
-
-            {/* Manual model input */}
-            {validatedModels.length === 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Models (one per line)</label>
-                <textarea
-                  value={form.modelsText}
-                  onChange={(e) => {
-                    setForm({ ...form, modelsText: e.target.value });
-                    const models = e.target.value.split("\n").map((m) => m.trim()).filter(Boolean);
-                    setSelectedModels(new Set(models));
-                  }}
-                  placeholder={"gpt-3.5-turbo\ngpt-4\nllama-3-8b"}
-                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5"
-                  rows={4}
-                />
-              </div>
-            )}
+            {/* Models textarea */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                Models <span className="text-stone-400 font-normal">(one per line)</span>
+              </label>
+              <textarea
+                value={form.modelsText}
+                onChange={(e) => setForm({ ...form, modelsText: e.target.value })}
+                placeholder={"llama-3.1-8b\ncodellama-13b\nmistral-7b"}
+                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[100px]"
+                rows={5}
+              />
+              <p className="text-[11px] text-stone-400">
+                Type model names or click Fetch Models to auto-detect
+              </p>
+            </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Label (optional)</label>
-              <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="e.g. My Ollama Server" />
+              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Label</label>
+              <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="My Ollama Server" />
             </div>
           </div>
           <DialogFooter>
@@ -495,12 +419,11 @@ function CustomAccountsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>Are you sure you want to delete this custom provider?</DialogDescription>
+            <DialogTitle>Delete Provider</DialogTitle>
+            <DialogDescription>Delete this custom provider?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>

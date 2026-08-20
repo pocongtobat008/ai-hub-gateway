@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from services.custom_account_service import (
     add_account,
     delete_account,
+    get_account as get_account_obj,
     get_credentials,
     list_accounts,
     reset_all,
@@ -50,10 +51,8 @@ def create_router() -> APIRouter:
         if not request.base_url.strip():
             raise HTTPException(status_code=400, detail="base_url is required")
         base_url = request.base_url.strip().rstrip("/")
-        # Validate models if not provided
-        models = request.models
-        if not models:
-            models = validate_models(base_url, request.api_key.strip())
+        # Use only models provided by user — do NOT auto-fetch
+        models = [m.strip() for m in request.models if m.strip()]
         account = add_account(base_url, request.api_key.strip(), models, request.label)
         return account
 
@@ -109,18 +108,23 @@ def create_router() -> APIRouter:
         return {"ok": True, "reset": count}
 
     async def _test_single(base_url: str, api_key: str, account_id: str) -> dict[str, Any]:
-        """Test a single custom endpoint."""
+        """Test a single custom endpoint using the first registered model."""
         import httpx
         try:
+            # Get the account to find its registered models
+            acc = get_account_obj(account_id)
+            models_list = acc.get("models", []) if acc else []
+            test_model = models_list[0] if models_list else "gpt-3.5-turbo"
+
             url = f"{base_url.rstrip('/')}/v1/chat/completions"
             headers = {"Content-Type": "application/json"}
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
 
             payload = {
-                "model": "gpt-3.5-turbo",
-                "messages": [{"role": "user", "content": "Say hi in 3 words"}],
-                "max_tokens": 20,
+                "model": test_model,
+                "messages": [{"role": "user", "content": "Say hi"}],
+                "max_tokens": 10,
                 "stream": False,
             }
 
