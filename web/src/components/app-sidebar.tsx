@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Atom,
   BookOpen,
+  Bot,
   Box,
   Clapperboard,
   Cog,
@@ -49,6 +50,7 @@ const accountNav: NavItem[] = [
   { href: "/gemini-accounts", label: "Gemini Accounts", icon: Gem },
   { href: "/deepseek-accounts", label: "DeepSeek", icon: Atom },
   { href: "/grok-accounts", label: "Grok", icon: Zap },
+  { href: "/manus-accounts", label: "Manus", icon: Bot },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 

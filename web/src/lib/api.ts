@@ -1289,3 +1289,49 @@ export async function testProxyClearance(targetUrl?: string) {
     body: { target_url: targetUrl ?? "https://chatgpt.com" },
   });
 }
+
+// ─── Manus Accounts ──────────────────────────────────────────────
+
+export type ManusAccount = {
+  id: string;
+  api_key_masked?: string;
+  label?: string;
+  status: "normal" | "rate_limited" | "abnormal" | "disabled";
+  last_error?: string | null;
+  last_error_at?: string | null;
+  last_used_at?: string | null;
+  created_at?: string;
+  fail_count?: number;
+};
+
+export async function fetchManusAccounts() {
+  return httpRequest<{ accounts: ManusAccount[] }>("/api/manus/accounts");
+}
+
+export async function createManusAccount(input: { api_key: string; label?: string }) {
+  return httpRequest<ManusAccount>("/api/manus/accounts", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function deleteManusAccount(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/manus/accounts/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function testManus(input: { account_id?: string }) {
+  return httpRequest<{ ok: boolean; error?: string }>("/api/manus/test", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function testAllManus() {
+  return httpRequest<{ ok: boolean; total: number; passed: number; failed: number }>("/api/manus/test-all", { method: "POST" });
+}
+
+export async function resetManusAccounts() {
+  return httpRequest<{ ok: boolean; reset: number }>("/api/manus/reset", { method: "POST" });
+}

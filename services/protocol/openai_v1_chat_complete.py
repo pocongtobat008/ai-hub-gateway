@@ -10,6 +10,7 @@ from services.protocol.chat_completion_cache import cache_key, chat_completion_c
 from services.deepseek_provider import is_deepseek_model
 from services.gemini_provider import is_gemini_model
 from services.grok_provider import is_grok_model
+from services.manus_provider import is_manus_model
 from services.protocol.conversation import (
     ConversationRequest,
     ImageOutput,
@@ -303,6 +304,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
         if is_grok_model(model):
             from services.protocol.grok_chat import grok_chat_events
             return grok_chat_events(body)
+        if is_manus_model(model):
+            from services.protocol.manus_chat import manus_chat_events
+            return manus_chat_events(body)
         if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
             return stream_web_search_chat_completion(messages, model)
         thinking_effort = thinking_effort_from_body(body)
@@ -322,6 +326,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
     if is_grok_model(model):
         from services.protocol.grok_chat import grok_chat_response
         return grok_chat_response(body)
+    if is_manus_model(model):
+        from services.protocol.manus_chat import manus_chat_response
+        return manus_chat_response(body)
     if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
         return web_search_chat_response(messages, model)
     thinking_effort = thinking_effort_from_body(body)

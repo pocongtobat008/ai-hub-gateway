@@ -6,6 +6,7 @@ from services.account_service import account_service
 from services.deepseek_provider import deepseek_provider
 from services.gemini_provider import gemini_provider
 from services.grok_provider import grok_provider
+from services.manus_account_service import list_accounts as list_manus_accounts
 from services.model_service import model_catalog_service
 from utils.helper import CODEX_IMAGE_MODEL
 
@@ -123,5 +124,25 @@ def list_models() -> dict[str, Any]:
                 })
         except Exception:
             pass
+
+    # Add Manus models if accounts are configured
+    manus_accounts = list_manus_accounts()
+    if manus_accounts:
+        manus_models = ["manus-1.6", "agent-default-main_task"]
+        for model_id in manus_models:
+            if model_id not in seen:
+                seen.add(model_id)
+                data.append({
+                    "id": model_id,
+                    "object": "model",
+                    "created": 0,
+                    "owned_by": "manus",
+                    "permission": [],
+                    "root": model_id,
+                    "parent": None,
+                    "capabilities": ["chat"],
+                    "available": True,
+                    "display_name": model_id,
+                })
 
     return result
