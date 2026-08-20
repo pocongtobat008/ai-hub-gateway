@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -278,18 +278,32 @@ function LoadingDots() {
   );
 }
 
-// ── User message (1-line collapsible + always-visible copy) ────────────────
+// ── User message — memoized to survive streaming re-renders ────────────────
 
-function UserMessage({ message }: { message: ChatMessage }) {
+const UserMessage = React.memo(function UserMessage({ message }: { message: ChatMessage }) {
   const text = messageText(message);
   const images = messageImages(message);
   const { copiedId, copy } = useCopyToClipboard();
-  const [expanded, setExpanded] = useState(false);
 
-  const lines = text.split("\n");
-  const isLong = lines.length > 1 || text.length > 120;
-  const firstLine = lines[0] || text;
+  // Use ref as backup — survives React re-renders that might remount
+  const expandedRef = useRef(false);
+  const [expanded, setExpanded] = useState(false);
+  const isExpanded = expanded || expandedRef.current;
+
+  const lines = useMemo(() => text.split("\n"), [text]);
+  const isLong = useMemo(() => lines.length > 1 || text.length > 120, [lines, text]);
+  // When collapsed: show first line, or first ~80 chars if single long line
+  const collapsedText = useMemo(() => {
+    if (lines.length > 1) return lines[0];
+    return text.length > 80 ? text.slice(0, 80) + "…" : text;
+  }, [lines, text]);
   const promptId = `prompt-${message.id}`;
+
+  const toggleExpanded = useCallback(() => {
+    const next = !expandedRef.current;
+    expandedRef.current = next;
+    setExpanded(next);
+  }, []);
 
   return (
     <div className="flex justify-end gap-3 animate-message-appear">
@@ -322,34 +336,27 @@ function UserMessage({ message }: { message: ChatMessage }) {
         {/* Prompt bubble */}
         {text && (
           <div className="rounded-3xl rounded-br-lg bg-stone-950 px-4 py-2.5 text-[15px] leading-6 text-white shadow-sm dark:bg-white dark:text-stone-950 sm:px-5 sm:py-3">
-            {isLong && !expanded ? (
+            {isLong ? (
               <div>
-                <div className="whitespace-pre-wrap">{firstLine}</div>
+                <div className="whitespace-pre-wrap">
+                  {isExpanded ? text : collapsedText}
+                </div>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpanded(true);
-                  }}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-200 dark:text-stone-500 dark:hover:text-stone-400"
+                  onClick={toggleExpanded}
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-stone-400 transition hover:bg-white/10 hover:text-stone-200 dark:text-stone-500 dark:hover:bg-black/10 dark:hover:text-stone-400"
                 >
-                  <ChevronRight className="size-3" />
-                  Show more ({lines.length} lines)
-                </button>
-              </div>
-            ) : isLong && expanded ? (
-              <div>
-                <div className="whitespace-pre-wrap">{text}</div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpanded(false);
-                  }}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-stone-400 transition hover:text-stone-200 dark:text-stone-500 dark:hover:text-stone-400"
-                >
-                  <ChevronDown className="size-3" />
-                  Collapse
+                  {isExpanded ? (
+                    <>
+                      <ChevronDown className="size-3" />
+                      Collapse
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="size-3" />
+                      Show more ({lines.length} lines)
+                    </>
+                  )}
                 </button>
               </div>
             ) : (
@@ -373,7 +380,7 @@ function UserMessage({ message }: { message: ChatMessage }) {
       </div>
     </div>
   );
-}
+});
 
 // ── Assistant message ──────────────────────────────────────────────────────
 
@@ -436,9 +443,9 @@ type ChatMessageViewProps = {
   isStreaming: boolean;
 };
 
-export function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) {
+export const ChatMessageView = React.memo(function ChatMessageView({ message, isStreaming }: ChatMessageViewProps) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }
   return <AssistantMessage message={message} isStreaming={isStreaming} />;
-}
+});
