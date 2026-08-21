@@ -1493,3 +1493,54 @@ export async function fetchDeepseekModelsFromSource() {
 export async function fetchGrokModelsFromSource() {
   return httpRequest<{ models: string[]; error?: string }>("/api/grok/fetch-models");
 }
+
+// --- OpenCode Accounts ---
+
+export type OpenCodeAccount = {
+  id: string;
+  label: string;
+  api_key_masked: string;
+  models: string[];
+  status: string;
+  last_error?: string | null;
+  last_error_at?: string | null;
+  last_used_at?: string | null;
+  created_at: string;
+  fail_count: number;
+};
+
+export async function fetchOpenCodeAccounts() {
+  return httpRequest<{ accounts: OpenCodeAccount[]; total: number }>("/api/opencode/accounts");
+}
+
+export async function addOpenCodeAccount(data: { api_key: string; models?: string[]; label?: string }) {
+  return httpRequest<{ id: string; label: string; models: string[] }>("/api/opencode/accounts", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateOpenCodeAccount(id: string, data: { api_key?: string; models?: string[]; label?: string }) {
+  return httpRequest<{ ok: boolean }>(`/api/opencode/accounts/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteOpenCodeAccount(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/opencode/accounts/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function refreshOpenCodeAccount(id: string) {
+  return httpRequest<{ ok: boolean; status?: string; error?: string }>(`/api/opencode/accounts/${encodeURIComponent(id)}/refresh`, { method: "POST" });
+}
+
+export async function resetAllOpenCodeAccounts() {
+  return httpRequest<{ ok: boolean; reset: number }>("/api/opencode/accounts/reset-all", { method: "POST" });
+}
+
+export async function fetchOpenCodeModelsFromSource() {
+  return httpRequest<{ models: string[]; count: number }>("/api/opencode/fetch-models");
+}

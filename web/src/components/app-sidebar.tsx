@@ -7,6 +7,7 @@ import {
   BookOpen,
   Bot,
   Box,
+  Code,
   Clapperboard,
   Cog,
   FileJson,
@@ -60,6 +61,7 @@ const accountNav: NavItem[] = [
   { href: "/custom-accounts", label: "Custom", icon: Globe, badgeKey: "custom" },
   { href: "/bansos-accounts", label: "Bansos", icon: Sparkles, badgeKey: "bansos" },
   { href: "/canvas-accounts", label: "Canvas (Free)", icon: Paintbrush, badgeKey: "canvas" },
+  { href: "/opencode-accounts", label: "OpenCode", icon: Code, badgeKey: "opencode" },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 
@@ -448,6 +450,7 @@ export function AppSidebar({
           custom: "/api/custom/accounts",
           bansos: "/api/bansos/accounts",
           canvas: "/api/canvas/accounts",
+          opencode: "/api/opencode/accounts",
         };
         const counts: Record<string, number> = {};
         const promises = Object.entries(urls).map(async ([key, url]) => {
