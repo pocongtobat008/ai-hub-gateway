@@ -47,6 +47,7 @@ const mainNav: NavItem[] = [
   { href: "/image", label: "Image Gen", icon: Image },
   { href: "/storyboard", label: "Storyboard", icon: Film },
   { href: "/autoclip", label: "AutoClip", icon: Scissors },
+  { href: "/mv-director", label: "MV Director", icon: Clapperboard },
   { href: "/gemini", label: "Gemini", icon: Sparkles },
 ];
 
