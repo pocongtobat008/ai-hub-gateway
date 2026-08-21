@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Shield, Square, Wand2, X } from "lucide-react";
+import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
 import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -211,9 +211,9 @@ export function ChatComposer({
               className="max-h-40 min-h-[56px] resize-none rounded-[24px] border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-6 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 dark:text-stone-100 dark:placeholder:text-stone-500 sm:min-h-[64px] sm:px-6 sm:pt-5 sm:pb-3 sm:text-base"
             />
             {isDragging ? (
-              <div              className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-400 bg-white/85 text-sm font-medium text-stone-700 backdrop-blur-[1px] sm:rounded-[32px]">
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-400 bg-white/85 text-sm font-medium text-stone-700 backdrop-blur-[1px] sm:rounded-[32px]">
                 <div className="flex items-center gap-2 rounded-full bg-stone-900 px-4 py-2 text-white shadow-lg dark:bg-stone-200 dark:text-stone-900">
-                  <ImagePlus className="size-4" />
+                  <Paperclip className="size-4" />
                   <span>Drop image to attach</span>
                 </div>
               </div>
@@ -223,15 +223,16 @@ export function ChatComposer({
             <div className="flex items-end justify-between gap-1.5 rounded-b-[20px] border-t border-stone-100/80 bg-white/80 px-2 pt-2 pb-2.5 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3 sm:gap-2" onClick={(event) => event.stopPropagation()}>
               <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
 
-                {/* Image attach */}
+                {/* Image / File attach */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach image"
+                  title="Attach image (paste or drag also works)"
                 >
-                  <ImagePlus className="size-3.5" />
-                  <span className="hidden sm:inline">Image</span>
+                  <Paperclip className="size-3.5" />
+                  <span className="hidden sm:inline">Attach</span>
                 </button>
 
                 {/* Tool selector — PROPER DROPDOWN */}
