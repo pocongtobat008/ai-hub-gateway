@@ -299,6 +299,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
         if is_image_chat_request(body):
             return image_chat_events(body)
         model, messages = text_chat_parts(body)
+        if is_canvas_model(model):
+            from services.protocol.canvas_chat import canvas_chat_events
+            return canvas_chat_events(body)
         if is_gemini_model(model):
             return gemini_chat_events(body)
         if is_bansos_model(model):
@@ -316,9 +319,6 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
         if is_custom_model(model):
             from services.protocol.custom_chat import custom_chat_events
             return custom_chat_events(body)
-        if is_canvas_model(model):
-            from services.protocol.canvas_chat import canvas_chat_events
-            return canvas_chat_events(body)
         if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
             return stream_web_search_chat_completion(messages, model)
         thinking_effort = thinking_effort_from_body(body)
@@ -330,6 +330,9 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
     if is_image_chat_request(body):
         return image_chat_response(body)
     model, messages = text_chat_parts(body)
+    if is_canvas_model(model):
+        from services.protocol.canvas_chat import canvas_chat_response
+        return canvas_chat_response(body)
     if is_gemini_model(model):
         return gemini_chat_response(body)
     if is_bansos_model(model):
@@ -347,9 +350,6 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
     if is_custom_model(model):
         from services.protocol.custom_chat import custom_chat_response
         return custom_chat_response(body)
-    if is_canvas_model(model):
-        from services.protocol.canvas_chat import canvas_chat_response
-        return canvas_chat_response(body)
     if is_web_search_chat_request(body) and not has_unsupported_tools(body, WEB_SEARCH_TOOL_TYPES):
         return web_search_chat_response(messages, model)
     thinking_effort = thinking_effort_from_body(body)
