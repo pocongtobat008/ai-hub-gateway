@@ -73,10 +73,10 @@ export default function AutoClipPage() {
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${AUTOCLIP_API}/api/v1/projects`);
+      const res = await fetch(`${AUTOCLIP_API}/api/v1/projects/`);
       if (!res.ok) throw new Error("Failed to fetch projects");
       const data = await res.json();
-      setProjects(data.projects || data || []);
+      setProjects(data.items || data.projects || data || []);
       setError(null);
     } catch (e: any) {
       setError(e.message);
@@ -88,10 +88,10 @@ export default function AutoClipPage() {
   // Fetch clips for a project
   const fetchClips = useCallback(async (projectId: string) => {
     try {
-      const res = await fetch(`${AUTOCLIP_API}/api/v1/projects/${projectId}/clips`);
+      const res = await fetch(`${AUTOCLIP_API}/api/v1/clips/?project_id=${projectId}`);
       if (!res.ok) throw new Error("Failed to fetch clips");
       const data = await res.json();
-      setClips(data.clips || data || []);
+      setClips(data.items || data.clips || data || []);
     } catch (e: any) {
       console.error("Failed to fetch clips:", e);
     }
@@ -102,13 +102,13 @@ export default function AutoClipPage() {
     if (!newProject.source_url && newProject.source_type !== "upload") return;
     try {
       setCreating(true);
-      const res = await fetch(`${AUTOCLIP_API}/api/v1/projects`, {
+      const res = await fetch(`${AUTOCLIP_API}/api/v1/projects/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newProject.name || `AutoClip ${Date.now()}`,
-          source_type: newProject.source_type,
-          source_url: newProject.source_url,
+          project_type: "entertainment",
+          source_url: newProject.source_url || null,
         }),
       });
       if (!res.ok) throw new Error("Failed to create project");
