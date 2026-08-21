@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { createBansosAccount, deleteBansosAccount, fetchBansosAccounts, fetchBansosModels, testBansos, testAllBansos, resetBansosAccounts, type BansosAccount } from "@/lib/api";
+import { createBansosAccount, deleteBansosAccount, fetchBansosAccounts, fetchBansosModels, fetchBansosModelsFromSource, testBansos, testAllBansos, resetBansosAccounts, type BansosAccount } from "@/lib/api";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   normal: { label: "Normal", cls: "bg-emerald-50 text-emerald-700" },
@@ -28,6 +28,7 @@ function BansosContent() {
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isUpdatingModels, setIsUpdatingModels] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [page, setPage] = useState(1);
   const didLoad = useRef(false);
@@ -102,6 +103,20 @@ function BansosContent() {
     finally { setIsRefreshingAll(false); }
   };
 
+  const handleUpdateModels = async () => {
+    setIsUpdatingModels(true);
+    try {
+      const data = await fetchBansosModelsFromSource();
+      if (data.models && data.models.length > 0) {
+        setAvailModels(data.models);
+        toast.success(`Updated ${data.models.length} models from source`);
+      } else {
+        toast.warning(data.error || "No models found");
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setIsUpdatingModels(false); }
+  };
+
   const handleResetAll = async () => {
     setIsResetting(true);
     try { const d = await resetBansosAccounts(); await load(); toast.success(`Reset ${d.reset}`); }
@@ -131,6 +146,9 @@ function BansosContent() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowHelp(!showHelp)} className="gap-1.5"><Clipboard className="size-4" /> Guide</Button>
+          <Button variant="outline" size="sm" onClick={() => void handleUpdateModels()} disabled={isUpdatingModels} className="gap-1.5">
+            <RefreshCw className={`size-4 ${isUpdatingModels ? "animate-spin" : ""}`} /> Update Models
+          </Button>
           <Button variant="outline" size="sm" onClick={() => void handleRefreshAll()} disabled={isRefreshingAll || isResetting || !accounts.length} className="gap-1.5">
             <RefreshCw className={`size-4 ${isRefreshingAll ? "animate-spin" : ""}`} /> Refresh All
           </Button>

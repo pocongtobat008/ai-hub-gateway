@@ -27,6 +27,7 @@ import {
   createGeminiAccount,
   deleteGeminiAccount,
   fetchGeminiAccounts,
+  fetchGeminiModelsFromSource,
   testGemini,
   testAllGemini,
   resetGeminiAccounts,
@@ -72,6 +73,7 @@ function GeminiAccountsContent() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isUpdatingModels, setIsUpdatingModels] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const didLoadRef = useRef(false);
@@ -240,6 +242,19 @@ function GeminiAccountsContent() {
     }
   };
 
+  const handleUpdateModels = async () => {
+    setIsUpdatingModels(true);
+    try {
+      const data = await fetchGeminiModelsFromSource();
+      if (data.models && data.models.length > 0) {
+        toast.success(`Found ${data.models.length} models from Gemini source`);
+      } else {
+        toast.warning(data.error || "No models found");
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setIsUpdatingModels(false); }
+  };
+
   const handleResetAll = async () => {
     setIsResetting(true);
     try {
@@ -276,6 +291,16 @@ function GeminiAccountsContent() {
           <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
             {usableCount}/{accounts.length} usable
           </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleUpdateModels()}
+            disabled={isUpdatingModels}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`size-4 ${isUpdatingModels ? "animate-spin" : ""}`} />
+            Update Models
+          </Button>
           <Button
             variant="outline"
             size="sm"

@@ -191,6 +191,17 @@ def create_router() -> APIRouter:
             store.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         return {"ok": True, "accounts": gemini_account_service.list_accounts()}
 
+    @router.get("/api/gemini/fetch-models")
+    async def fetch_models_from_source(authorization: str | None = Header(default=None)):
+        """Fetch live models from Gemini source."""
+        require_admin(authorization)
+        try:
+            models = await run_in_threadpool(gemini_provider.list_models, None, include_catalog=True)
+            model_ids = [m.get("id", m.get("name", "")) for m in models if m.get("id") or m.get("name")]
+            return {"models": model_ids}
+        except Exception as exc:
+            return {"models": [], "error": str(exc)}
+
     @router.get("/api/gemini/gems")
     async def list_gems(authorization: str | None = Header(default=None)):
         require_identity(authorization)

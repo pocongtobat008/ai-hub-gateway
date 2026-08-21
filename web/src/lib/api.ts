@@ -1475,3 +1475,21 @@ export async function testCanvasAccount(id: string) {
 export async function resetAllCanvasAccounts() {
   return httpRequest<{ ok: boolean; reset: number }>("/api/canvas/accounts/reset-all", { method: "POST" });
 }
+
+// --- Provider model fetching ---
+
+export async function fetchBansosModelsFromSource() {
+  return httpRequest<{ models: string[]; error?: string }>("/api/bansos/fetch-models");
+}
+
+export async function fetchGeminiModelsFromSource() {
+  return httpRequest<{ models: string[]; error?: string }>("/api/gemini/fetch-models");
+}
+
+export async function fetchDeepseekModelsFromSource() {
+  return httpRequest<{ models: string[]; error?: string }>("/api/deepseek/fetch-models");
+}
+
+export async function fetchGrokModelsFromSource() {
+  return httpRequest<{ models: string[]; error?: string }>("/api/grok/fetch-models");
+}

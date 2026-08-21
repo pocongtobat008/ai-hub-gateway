@@ -104,6 +104,17 @@ def create_router() -> APIRouter:
             raise HTTPException(status_code=404, detail={"error": "account not found"})
         return {"ok": True, "accounts": deepseek_account_service.list_accounts()}
 
+    @router.get("/api/deepseek/fetch-models")
+    async def fetch_models_from_source(authorization: str | None = Header(default=None)):
+        """Fetch live models from DeepSeek source."""
+        require_admin(authorization)
+        try:
+            models = await run_in_threadpool(deepseek_provider.list_models, include_catalog=True)
+            model_ids = [m.get("id", m.get("name", "")) for m in models if m.get("id") or m.get("name")]
+            return {"models": model_ids}
+        except Exception as exc:
+            return {"models": [], "error": str(exc)}
+
     @router.post("/api/deepseek/test")
     async def deepseek_test(body: DeepSeekTestRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)

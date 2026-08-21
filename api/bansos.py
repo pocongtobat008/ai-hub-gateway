@@ -38,6 +38,25 @@ def create_router() -> APIRouter:
     async def available_models() -> dict[str, Any]:
         return {"models": BANSOS_MODELS}
 
+    @router.get("/fetch-models")
+    async def fetch_models_from_source() -> dict[str, Any]:
+        """Fetch live models from the bansos-router daemon."""
+        import httpx
+        accounts = list_accounts()
+        if not accounts:
+            return {"models": [], "error": "No accounts configured"}
+        daemon_url = accounts[0].get("daemon_url", "http://127.0.0.1:17070")
+        try:
+            with httpx.Client(timeout=10) as client:
+                resp = client.get(f"{daemon_url.rstrip('/')}/v1/models")
+            if resp.status_code == 200:
+                data = resp.json()
+                models = [m["id"] for m in data.get("data", []) if m.get("id")]
+                return {"models": models}
+            return {"models": [], "error": f"HTTP {resp.status_code}"}
+        except Exception as exc:
+            return {"models": [], "error": str(exc)}
+
     @router.post("/accounts")
     async def add_bansos_account(request: AddBansosRequest) -> dict[str, Any]:
         url = request.daemon_url.strip()

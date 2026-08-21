@@ -880,9 +880,19 @@ function AccountsPageContent() {
         </div>
         <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
           <CardContent className="p-4">
-            <div className="mb-3 text-sm font-medium text-stone-700">
+            <div className="mb-3 flex items-center justify-between text-sm font-medium text-stone-700">
                Available system models
               <span className="ml-1 text-stone-400">({availableModels.length})</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void loadModels()}
+                disabled={isLoadingModels}
+                className="gap-1 text-xs"
+              >
+                <RefreshCw className={`size-3 ${isLoadingModels ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
             </div>
             <div className="flex flex-wrap gap-2">
               {availableModels.length > 0 ? (

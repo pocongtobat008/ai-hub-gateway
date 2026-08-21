@@ -89,6 +89,17 @@ def create_router() -> APIRouter:
         if not ok: raise HTTPException(status_code=404, detail="Account not found")
         return {"ok": True, "accounts": grok_account_service.list_accounts()}
 
+    @router.get("/api/grok/fetch-models")
+    async def fetch_models_from_source(authorization: str | None = Header(default=None)):
+        """Fetch live models from Grok/xAI source."""
+        require_admin(authorization)
+        try:
+            models = grok_provider.list_models()
+            model_ids = [m.get("id", m.get("name", "")) for m in models if m.get("id") or m.get("name")]
+            return {"models": model_ids}
+        except Exception as exc:
+            return {"models": [], "error": str(exc)}
+
     @router.post("/api/grok/test")
     async def test_account(body: TestAccountRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)

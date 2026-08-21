@@ -21,6 +21,7 @@ import {
   createGrokAccount,
   deleteGrokAccount,
   fetchGrokAccounts,
+  fetchGrokModelsFromSource,
   testGrok,
   testAllGrok,
   resetGrokAccounts,
@@ -78,6 +79,7 @@ function GrokAccountsContent() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isUpdatingModels, setIsUpdatingModels] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [page, setPage] = useState(1);
@@ -237,6 +239,19 @@ function GrokAccountsContent() {
   const startIdx = (safePage - 1) * PER_PAGE;
   const pagedAccounts = sortedAccounts.slice(startIdx, startIdx + PER_PAGE);
 
+  const handleUpdateModels = async () => {
+    setIsUpdatingModels(true);
+    try {
+      const data = await fetchGrokModelsFromSource();
+      if (data.models && data.models.length > 0) {
+        toast.success(`Found ${data.models.length} models from Grok source`);
+      } else {
+        toast.warning(data.error || "No models found");
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setIsUpdatingModels(false); }
+  };
+
   const handleResetAll = async () => {
     setIsResetting(true);
     try {
@@ -273,6 +288,16 @@ function GrokAccountsContent() {
           >
             <Clipboard className="size-4" />
             Setup Guide
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleUpdateModels()}
+            disabled={isUpdatingModels}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`size-4 ${isUpdatingModels ? "animate-spin" : ""}`} />
+            Update Models
           </Button>
           <Button
             variant="outline"
