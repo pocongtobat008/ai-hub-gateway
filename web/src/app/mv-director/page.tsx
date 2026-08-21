@@ -12,18 +12,24 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const MV_DIRECTOR_URL = "http://localhost:3060";
+function getBaseUrl() {
+  if (typeof window === "undefined") return "http://localhost:3060";
+  return `${window.location.protocol}//${window.location.hostname}:3060`;
+}
 
 export default function MvDirectorPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [baseUrl, setBaseUrl] = useState("http://localhost:3060");
 
   useEffect(() => {
+    const url = getBaseUrl();
+    setBaseUrl(url);
     const checkHealth = async () => {
       try {
-        const res = await fetch(`${MV_DIRECTOR_URL}/`, { mode: "no-cors" });
+        await fetch(`${url}/`, { mode: "no-cors" });
         setHasError(false);
       } catch {
         setHasError(true);
@@ -37,7 +43,7 @@ export default function MvDirectorPage() {
   const handleRefresh = () => {
     setIsLoading(true);
     if (iframeRef.current) {
-      iframeRef.current.src = MV_DIRECTOR_URL;
+      iframeRef.current.src = baseUrl;
     }
   };
 
@@ -85,7 +91,7 @@ export default function MvDirectorPage() {
             )}
           </button>
           <a
-            href={MV_DIRECTOR_URL}
+            href={baseUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 rounded hover:bg-muted transition-colors"
@@ -146,7 +152,7 @@ export default function MvDirectorPage() {
         )}
         <iframe
           ref={iframeRef}
-          src={MV_DIRECTOR_URL}
+          src={baseUrl}
           className="w-full h-full border-0"
           onLoad={() => setIsLoading(false)}
           onError={() => {
