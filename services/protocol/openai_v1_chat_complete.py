@@ -13,7 +13,6 @@ from services.grok_provider import is_grok_model
 from services.manus_provider import is_manus_model
 from services.custom_provider import is_custom_model
 from services.bansos_provider import is_bansos_model
-from services.canvas_provider import is_canvas_model
 from services.protocol.conversation import (
     ConversationRequest,
     ImageOutput,
@@ -299,9 +298,6 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
         if is_image_chat_request(body):
             return image_chat_events(body)
         model, messages = text_chat_parts(body)
-        if is_canvas_model(model):
-            from services.protocol.canvas_chat import canvas_chat_events
-            return canvas_chat_events(body)
         if is_gemini_model(model):
             return gemini_chat_events(body)
         if is_bansos_model(model):
@@ -330,9 +326,6 @@ def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
     if is_image_chat_request(body):
         return image_chat_response(body)
     model, messages = text_chat_parts(body)
-    if is_canvas_model(model):
-        from services.protocol.canvas_chat import canvas_chat_response
-        return canvas_chat_response(body)
     if is_gemini_model(model):
         return gemini_chat_response(body)
     if is_bansos_model(model):
