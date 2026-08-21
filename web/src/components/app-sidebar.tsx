@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   Paintbrush,
   Pencil,
+  Scissors,
   Search,
   Shield,
   Sparkles,
@@ -45,6 +46,7 @@ const mainNav: NavItem[] = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/image", label: "Image Gen", icon: Image },
   { href: "/storyboard", label: "Storyboard", icon: Film },
+  { href: "/autoclip", label: "AutoClip", icon: Scissors },
   { href: "/gemini", label: "Gemini", icon: Sparkles },
 ];
 
