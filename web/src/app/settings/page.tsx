@@ -32,6 +32,7 @@ import { SettingsHeader } from "./components/settings-header";
 import { Sub2APIConnections } from "./components/sub2api-connections";
 import { ThirdPartyAppsCard } from "./components/third-party-apps-card";
 import { UserKeysCard } from "./components/user-keys-card";
+import { AuthCodesCard } from "./components/auth-codes-card";
 import { useSettingsStore } from "./store";
 
 const settingsTabs = [
@@ -103,6 +104,7 @@ function SettingsPageContent() {
         </div>
         <TabsContent value="management">
           <div className="space-y-4">
+            <AuthCodesCard />
             <div className="glass-card rounded-2xl border border-white/40 p-6 dark:border-white/5">
               <h3 className="mb-4 text-lg font-bold tracking-tight">Account Management</h3>
               <p className="mb-4 text-sm text-stone-500">Quick links to manage all your AI provider accounts in one place.</p>

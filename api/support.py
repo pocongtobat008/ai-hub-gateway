@@ -31,6 +31,10 @@ def require_identity(authorization: str | None) -> dict[str, object]:
     token = extract_bearer_token(authorization)
     identity = _legacy_admin_identity(token) or auth_service.authenticate(token)
     if identity is None:
+        # Try auth code authentication
+        from services.auth_code_service import authenticate as auth_code_authenticate
+        identity = auth_code_authenticate(token)
+    if identity is None:
         raise HTTPException(status_code=401, detail={"error": "Invalid or expired key, please log in again"})
     return identity
 

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LoaderCircle, Sparkles } from "lucide-react";
+import { LoaderCircle, Key, Sparkles, Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,13 @@ export default function LoginPage() {
   const router = useRouter();
   const [authKey, setAuthKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showKey, setShowKey] = useState(false);
   const { isCheckingAuth } = useRedirectIfAuthenticated();
 
   const handleLogin = async () => {
     const normalizedAuthKey = authKey.trim();
     if (!normalizedAuthKey) {
-      toast.error("Please enter your key");
+      toast.error("Please enter your access key or auth code");
       return;
     }
 
@@ -35,6 +36,7 @@ export default function LoginPage() {
         subjectId: data.subject_id,
         name: data.name,
       });
+      toast.success(`Welcome back, ${data.name || "User"}!`);
       router.replace(getDefaultRouteForRole(data.role));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed";
@@ -61,53 +63,88 @@ export default function LoginPage() {
 
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -right-24 size-96 rounded-full bg-gradient-to-br from-stone-200/40 to-stone-300/20 blur-3xl dark:from-stone-800/20 dark:to-stone-700/10" />
-        <div className="absolute -bottom-24 -left-24 size-96 rounded-full bg-gradient-to-tr from-stone-300/30 to-stone-200/20 blur-3xl dark:from-stone-700/15 dark:to-stone-800/10" />
+        <div className="absolute -top-24 -right-24 size-96 rounded-full bg-gradient-to-br from-indigo-200/40 to-purple-300/20 blur-3xl dark:from-indigo-800/20 dark:to-purple-700/10" />
+        <div className="absolute -bottom-24 -left-24 size-96 rounded-full bg-gradient-to-tr from-indigo-300/30 to-blue-200/20 blur-3xl dark:from-indigo-700/15 dark:to-blue-800/10" />
       </div>
 
       <Card className="glass-card relative z-10 w-full max-w-[440px] rounded-3xl border-white/40 shadow-[0_32px_100px_rgba(0,0,0,0.08)] animate-fade-in-scale dark:border-white/5 dark:shadow-[0_32px_100px_rgba(0,0,0,0.3)]">
         <CardContent className="space-y-6 p-6 sm:space-y-7 sm:p-10">
           <div className="space-y-5 text-center">
-            <div className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl dark:from-stone-200 dark:to-stone-400 dark:text-stone-950">
+            <div className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl">
               <Sparkles className="size-7" />
             </div>
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight">
-                <span className="brand-text">Welcome to BecomeAI</span>
+                <span className="brand-text">BecomeAI</span>
               </h1>
               <p className="text-sm leading-6 text-stone-500 dark:text-stone-400">
-                Enter your key to access chat, image generation, and more.
+                Enter your access key or auth code to start chatting.
               </p>
             </div>
           </div>
 
           <div className="space-y-3">
             <label htmlFor="auth-key" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Access Key
+              Access Key or Auth Code
             </label>
-            <Input
-              id="auth-key"
-              type="password"
-              value={authKey}
-              onChange={(event) => setAuthKey(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleLogin();
-                }
-              }}
-              placeholder="Enter your key"
-              className="h-12 rounded-xl border-stone-200/60 bg-white/50 px-4 text-sm backdrop-blur-sm dark:border-white/8 dark:bg-white/5"
-            />
+            <div className="relative">
+              <Input
+                id="auth-key"
+                type={showKey ? "text" : "password"}
+                value={authKey}
+                onChange={(event) => setAuthKey(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void handleLogin();
+                  }
+                }}
+                placeholder="sk-... or BECOME-XXXX-XXXX"
+                className="h-12 rounded-xl border-stone-200/60 bg-white/50 px-4 pr-10 text-sm backdrop-blur-sm dark:border-white/8 dark:bg-white/5"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+              >
+                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           <Button
-            className="h-12 w-full rounded-xl bg-stone-900 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white"
+            className="h-12 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-indigo-500 hover:to-purple-500 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
             onClick={() => void handleLogin()}
             disabled={isSubmitting}
           >
             {isSubmitting ? <LoaderCircle className="size-4 animate-spin" /> : null}
             {isSubmitting ? "Connecting..." : "Sign In"}
           </Button>
+
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-stone-200 dark:border-stone-700" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-stone-400 dark:bg-stone-900 dark:text-stone-500">
+                  How to get access
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-stone-200/60 bg-stone-50/50 p-3 text-center dark:border-white/5 dark:bg-white/3">
+                <Key className="mx-auto h-4 w-4 text-indigo-500 mb-1" />
+                <div className="text-[11px] font-medium text-stone-700 dark:text-stone-300">API Key</div>
+                <div className="text-[10px] text-stone-400">sk-xxx...</div>
+              </div>
+              <div className="rounded-xl border border-stone-200/60 bg-stone-50/50 p-3 text-center dark:border-white/5 dark:bg-white/3">
+                <Shield className="mx-auto h-4 w-4 text-purple-500 mb-1" />
+                <div className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Auth Code</div>
+                <div className="text-[10px] text-stone-400">BECOME-XXXX</div>
+              </div>
+            </div>
+          </div>
 
           <p className="text-center text-[11px] text-stone-400 dark:text-stone-500">
             Powered by BecomeAI
