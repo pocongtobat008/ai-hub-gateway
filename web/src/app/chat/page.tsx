@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Download, History, LoaderCircle, Menu, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
+import { ArrowDown, Compass, Download, History, LoaderCircle, Menu, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
 import { ChatMessageView, DateSeparator } from "./components/chat-message";
+import { CanvasView } from "./components/canvas-view";
 import { streamChatCompletion } from "./components/stream";
 import { Button } from "@/components/ui/button";
 import {
@@ -662,12 +663,57 @@ function ChatPageContent() {
 
       try {
         let content = "";
-        if (tool === "image" || tool === "canvas" || tool === "infinite-canvas") {
-          const referenceFiles = attachedImages.map((image) => dataUrlToFile(image.dataUrl, image.name));
-          const isEdit = tool === "canvas" && referenceFiles.length > 0;
-          const response = isEdit
-            ? await editImage(referenceFiles, userText, toolImageModel)
-            : await generateImage(userText, toolImageModel, undefined, "auto", "url");
+        if (tool === "canvas" || tool === "infinite-canvas") {
+          // Canvas tool: send AI prompt to generate HTML/CSS/JS code
+          const canvasPrompt = [
+            `You are a creative web developer. Generate a complete, working HTML/CSS/JS implementation based on this request:`,
+            ``,
+            `User request: ${userText}`,
+            ``,
+            `Rules:`,
+            `- Output a single complete HTML file with embedded CSS and JS`,
+            `- Use modern CSS (flexbox, grid, variables, animations)`,
+            `- Make it responsive and visually polished`,
+            `- Use realistic placeholder content (Lorem ipsum for text, placeholder.com for images)`,
+            `- Include all necessary code in one HTML file with <style> and <script> tags`,
+            `- Make it production-quality, not a prototype`,
+            `- Output ONLY the code in a single \`\`\`html code block, no explanations`,
+          ].join("\n");
+          // Use streaming to generate canvas content
+          const canvasController = new AbortController();
+          let canvasContent = "";
+          await streamChatCompletion({
+            model,
+            messages: [
+              { role: "system", content: "You are an expert web developer. Generate complete, working HTML/CSS/JS code. Output ONLY the code in a single html code block." },
+              { role: "user", content: canvasPrompt },
+            ],
+            reasoningEffort,
+            tool: undefined,
+            signal: canvasController.signal,
+            onDelta: (text) => {
+              canvasContent += text;
+              void updateConversation(conversationId, (current) => {
+                if (!current) return current;
+                return {
+                  ...current,
+                  updatedAt: new Date().toISOString(),
+                  messages: current.messages.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: canvasContent }
+                      : msg,
+                  ),
+                };
+              }, false);
+            },
+          });
+          content = canvasContent;
+          if (!content.trim()) {
+            throw new Error("No canvas content generated");
+          }
+        } else if (tool === "image") {
+          // Image tool: generate image
+          const response = await generateImage(userText, toolImageModel, undefined, "auto", "url");
           const imageUrls = (response.data || []).map((item) =>
             item.url
               ? (item.url.startsWith("http") ? item.url : `${webConfig.apiUrl.replace(/\/$/, "")}${item.url}`)
@@ -894,20 +940,60 @@ function ChatPageContent() {
                     const prevMessage = index > 0 ? selectedConversation.messages[index - 1] : null;
                     const showDateSep = !prevMessage ||
                       new Date(message.createdAt).toDateString() !== new Date(prevMessage.createdAt).toDateString();
+                    // Check if this assistant message has code blocks (canvas mode)
+                    const isCanvasMessage = (tool === "canvas" || tool === "infinite-canvas") &&
+                      message.role === "assistant" &&
+                      typeof message.content === "string" &&
+                      (message.content.includes("```html") || message.content.includes("```css") || message.content.includes("```js") || message.content.includes("```javascript"));
                     return (
                       <React.Fragment key={message.id}>
                         {showDateSep && <DateSeparator date={message.createdAt} />}
-                        <ChatMessageView
-                          message={message}
-                          isStreaming={Boolean(isAssistantStreaming)}
-                        />
+                        {isCanvasMessage ? (
+                          <CanvasView
+                            responseText={typeof message.content === "string" ? message.content : ""}
+                            isStreaming={isAssistantStreaming}
+                            title={selectedConversation.title}
+                          />
+                        ) : (
+                          <ChatMessageView
+                            message={message}
+                            isStreaming={Boolean(isAssistantStreaming)}
+                          />
+                        )}
                       </React.Fragment>
                     );
                   })}
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-                  {tool === 'anti-slop' ? (
+                  {tool === 'canvas' || tool === 'infinite-canvas' ? (
+                    <>
+                      <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-700 text-white shadow-lg animate-float">
+                        <Compass className="size-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h2 className="text-base font-semibold tracking-tight text-stone-900 sm:text-lg dark:text-stone-100">
+                          Canvas Mode
+                        </h2>
+                        <p className="text-xs leading-5 text-stone-500 sm:text-sm sm:leading-6">
+                          Describe what you want to build — landing page, dashboard, component, app UI.
+                          AI generates HTML/CSS/JS with a live preview.
+                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+                        {["Build a pricing page with 3 tiers", "Create a dark mode dashboard", "Design a portfolio with animations", "Make a responsive nav bar"].map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => setInput(suggestion)}
+                            className="cursor-pointer rounded-full border border-blue-200 bg-blue-50/90 px-3 py-1.5 text-[11px] font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 hover:text-blue-900 active:scale-95 sm:px-3.5 sm:text-xs dark:border-blue-800 dark:bg-blue-950/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : tool === 'anti-slop' ? (
                     <>
                       <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white shadow-lg animate-float">
                         <Shield className="size-6" />

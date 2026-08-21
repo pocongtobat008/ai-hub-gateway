@@ -35,7 +35,7 @@ export type ComposerTool = "auto" | "image" | "canvas" | "infinite-canvas" | "vi
 export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: React.ElementType; desc: string }> = [
   { value: "auto", label: "Auto", icon: Atom, desc: "Let AI decide the best model" },
   { value: "image", label: "Image Gen", icon: Layers, desc: "Generate images with AI" },
-  { value: "canvas", label: "Canvas", icon: Compass, desc: "Edit or create on canvas" },
+  { value: "canvas", label: "Canvas", icon: Compass, desc: "Generate HTML/CSS/JS with live preview" },
   { value: "infinite-canvas", label: "Infinite Canvas", icon: Box, desc: "Unlimited creative workspace" },
   { value: "video", label: "Video", icon: Clapperboard, desc: "Generate video with Veo" },
   { value: "research", label: "Research", icon: Wand2, desc: "Deep research with Gemini" },
