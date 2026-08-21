@@ -1440,3 +1440,38 @@ export async function testAllBansos() {
 export async function resetBansosAccounts() {
   return httpRequest<{ ok: boolean; reset: number }>("/api/bansos/reset", { method: "POST" });
 }
+
+// ── Canvas Proxy ────────────────────────────────────────────────────────
+
+export type CanvasAccount = {
+  id: string;
+  base_url: string;
+  token: string;
+  label: string;
+  models: string[];
+  status: string;
+  total_requests: number;
+  error_count: number;
+  last_used: string | null;
+  created_at: string;
+};
+
+export async function fetchCanvasAccounts() {
+  return httpRequest<{ accounts: CanvasAccount[]; total: number }>("/api/canvas/accounts");
+}
+
+export async function createCanvasAccount(input: { base_url: string; token: string; label?: string; models?: string[] }) {
+  return httpRequest<{ account: CanvasAccount }>("/api/canvas/accounts", { method: "POST", body: input });
+}
+
+export async function deleteCanvasAccount(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/canvas/accounts/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function testCanvasAccount(id: string) {
+  return httpRequest<{ ok: boolean; status?: string; error?: string }>(`/api/canvas/accounts/${encodeURIComponent(id)}/test`);
+}
+
+export async function resetAllCanvasAccounts() {
+  return httpRequest<{ ok: boolean; reset: number }>("/api/canvas/accounts/reset-all", { method: "POST" });
+}

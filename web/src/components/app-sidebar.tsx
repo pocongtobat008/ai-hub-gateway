@@ -19,6 +19,7 @@ import {
   MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
+  Paintbrush,
   Pencil,
   Search,
   Shield,
@@ -55,6 +56,7 @@ const accountNav: NavItem[] = [
   { href: "/manus-accounts", label: "Manus", icon: Bot, badgeKey: "manus" },
   { href: "/custom-accounts", label: "Custom", icon: Globe, badgeKey: "custom" },
   { href: "/bansos-accounts", label: "Bansos", icon: Sparkles, badgeKey: "bansos" },
+  { href: "/canvas-accounts", label: "Canvas (Free)", icon: Paintbrush, badgeKey: "canvas" },
   { href: "/image-manager", label: "Image Manager", icon: Box },
 ];
 
@@ -442,6 +444,7 @@ export function AppSidebar({
           manus: "/api/manus/accounts",
           custom: "/api/custom/accounts",
           bansos: "/api/bansos/accounts",
+          canvas: "/api/canvas/accounts",
         };
         const counts: Record<string, number> = {};
         const promises = Object.entries(urls).map(async ([key, url]) => {

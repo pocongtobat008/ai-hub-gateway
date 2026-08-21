@@ -9,6 +9,7 @@ from services.grok_provider import grok_provider
 from services.manus_account_service import list_accounts as list_manus_accounts
 from services.custom_provider import get_all_custom_models
 from services.bansos_provider import get_all_bansos_models
+from services.canvas_provider import get_all_canvas_models
 from services.model_service import model_catalog_service
 from utils.helper import CODEX_IMAGE_MODEL
 
@@ -164,5 +165,14 @@ def list_models() -> dict[str, Any]:
             continue
         seen.add(model_id)
         data.append(bansos_model)
+
+    # Add Gemini Canvas proxy models
+    canvas_models = get_all_canvas_models()
+    for canvas_model in canvas_models:
+        model_id = str(canvas_model.get("id") or "").strip()
+        if not model_id or model_id in seen:
+            continue
+        seen.add(model_id)
+        data.append(canvas_model)
 
     return result
