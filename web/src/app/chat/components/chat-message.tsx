@@ -8,7 +8,10 @@ import {
   Copy,
   Download,
   Edit3,
+  FileText,
+  Image as ImageIcon,
   LoaderCircle,
+  Paperclip,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -95,6 +98,50 @@ function downloadUrl(url: string, filename: string) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// ── Format timestamp ───────────────────────────────────────────────────────
+
+function formatTime(iso: string) {
+  try {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  } catch {
+    return "";
+  }
+}
+
+function formatDateSeparator(iso: string) {
+  try {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return "";
+  }
+}
+
+// ── Date separator between messages ────────────────────────────────────────
+
+export function DateSeparator({ date }: { date: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="h-px flex-1 bg-stone-200 dark:bg-white/10" />
+      <span className="shrink-0 text-[11px] font-medium text-stone-400 dark:text-stone-500">
+        {formatDateSeparator(date)}
+      </span>
+      <div className="h-px flex-px bg-stone-200 dark:bg-white/10" />
+    </div>
+  );
 }
 
 // ── Markdown with enhanced code blocks ─────────────────────────────────────
@@ -192,14 +239,24 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                 <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
                   {language || "code"}
                 </span>
-                <CopyButton
-                  id={blockId}
-                  text={codeText}
-                  copiedId={copiedId}
-                  copy={copy}
-                  label=""
-                  className="opacity-0 transition-opacity group-hover/code:opacity-100"
-                />
+                <div className="flex items-center gap-1">
+                  <CopyButton
+                    id={blockId}
+                    text={codeText}
+                    copiedId={copiedId}
+                    copy={copy}
+                    label=""
+                    className="opacity-0 transition-opacity group-hover/code:opacity-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => downloadUrl(`data:text/plain,${encodeURIComponent(codeText)}`, `${language || "code"}.txt`)}
+                    className="inline-flex size-6 items-center justify-center rounded-lg text-stone-400 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover/code:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
+                    title="Download code"
+                  >
+                    <Download className="size-3" />
+                  </button>
+                </div>
               </div>
               <pre
                 className={cn(
@@ -298,6 +355,7 @@ const UserMessage = React.memo(function UserMessage({ message }: { message: Chat
     return text.length > 80 ? text.slice(0, 80) + "…" : text;
   }, [lines, text]);
   const promptId = `prompt-${message.id}`;
+  const timeStr = formatTime(message.createdAt);
 
   const toggleExpanded = useCallback(() => {
     const next = !expandedRef.current;
@@ -365,16 +423,19 @@ const UserMessage = React.memo(function UserMessage({ message }: { message: Chat
           </div>
         )}
 
-        {/* Copy prompt — always visible */}
+        {/* Actions row: copy + timestamp */}
         {text && (
-          <div className="mt-1.5 flex justify-end">
+          <div className="mt-1.5 flex items-center justify-end gap-2">
             <CopyButton
               id={promptId}
               text={text}
               copiedId={copiedId}
               copy={copy}
-              label="Copy prompt"
+              label="Copy"
             />
+            {timeStr && (
+              <span className="text-[10px] text-stone-400 dark:text-stone-500 select-none">{timeStr}</span>
+            )}
           </div>
         )}
       </div>
@@ -388,6 +449,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
   const text = messageText(message);
   const { copiedId, copy } = useCopyToClipboard();
   const responseId = `response-${message.id}`;
+  const timeStr = formatTime(message.createdAt);
 
   return (
     <div className="flex gap-3 animate-message-appear group/msg">
@@ -419,16 +481,19 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
           </span>
         )}
 
-        {/* Copy response — always visible */}
+        {/* Actions row: copy + timestamp */}
         {text && !isStreaming && (
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <CopyButton
               id={responseId}
               text={text}
               copiedId={copiedId}
               copy={copy}
-              label="Copy response"
+              label="Copy"
             />
+            {timeStr && (
+              <span className="text-[10px] text-stone-400 dark:text-stone-500 select-none">{timeStr}</span>
+            )}
           </div>
         )}
       </div>

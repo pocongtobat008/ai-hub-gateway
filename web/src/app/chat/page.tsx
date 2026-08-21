@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, History, LoaderCircle, Menu, Plus, Shield, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, Download, History, LoaderCircle, Menu, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
-import { ChatMessageView } from "./components/chat-message";
+import { ChatMessageView, DateSeparator } from "./components/chat-message";
 import { streamChatCompletion } from "./components/stream";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,52 @@ const CHAT_TOOL_STORAGE_KEY = "chatgpt2api:chat_last_tool";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGES = 4;
 const SCROLL_TO_LATEST_THRESHOLD = 160;
+
+// ── Share conversation ──────────────────────────────────────────────────
+
+function formatMessageForShare(message: { role: string; content: any; createdAt?: string }): string {
+  const roleLabel = message.role === "user" ? "You" : "AI";
+  const text = typeof message.content === "string"
+    ? message.content
+    : Array.isArray(message.content)
+      ? message.content.filter((p: any) => p.type === "text").map((p: any) => p.text).join("")
+      : "";
+  return `${roleLabel}: ${text}`;
+}
+
+async function shareConversation(conversation: { title: string; messages: any[] }) {
+  const header = `# ${conversation.title}\n\nExported from BecomeAI — ${new Date().toLocaleDateString()}\n\n---\n\n`;
+  const body = conversation.messages
+    .filter((m: any) => m.role === "user" || (m.role === "assistant" && m.content))
+    .map(formatMessageForShare)
+    .join("\n\n");
+  const full = header + body;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: conversation.title, text: full });
+      return;
+    } catch {
+      // user cancelled or share not supported — fallback to clipboard
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(full);
+    toast.success("Conversation copied to clipboard!");
+  } catch {
+    // fallback: create download
+    const blob = new Blob([full], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${conversation.title.replace(/[^a-z0-9]/gi, "-").slice(0, 40)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded as Markdown file");
+  }
+}
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -751,6 +797,17 @@ function ChatPageContent() {
               <Plus className="size-4" />
               <span className="hidden sm:inline">New</span>
             </button>
+            {selectedConversation && (
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white/85 text-stone-500 shadow-sm transition-all active:scale-95 hover:bg-stone-100 hover:text-stone-700 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                onClick={() => shareConversation(selectedConversation)}
+                aria-label="Share conversation"
+                title="Share / Export"
+              >
+                <Share2 className="size-4" />
+              </button>
+            )}
             <button
               type="button"
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white/85 text-stone-500 shadow-sm transition-all active:scale-95 disabled:opacity-40 dark:border-white/10 dark:bg-white/5"
@@ -763,6 +820,17 @@ function ChatPageContent() {
           </div>
 
           <div className="relative min-h-0 flex-1">
+            {/* Desktop share button — top right corner */}
+            {selectedConversation && hasMessages && (
+              <button
+                type="button"
+                className="absolute top-3 right-3 z-10 hidden h-8 w-8 items-center justify-center rounded-lg border border-stone-200 bg-white/90 text-stone-400 shadow-sm backdrop-blur transition-all hover:bg-stone-100 hover:text-stone-600 sm:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-stone-500 dark:hover:bg-white/10 dark:hover:text-stone-300"
+                onClick={() => shareConversation(selectedConversation!)}
+                title="Share / Export conversation"
+              >
+                <Share2 className="size-4" />
+              </button>
+            )}
             <div
               ref={messagesViewportRef}
               onScroll={handleMessagesScroll}
@@ -771,15 +839,69 @@ function ChatPageContent() {
             >
               {hasMessages && selectedConversation ? (
                 <div className="mx-auto flex w-full max-w-[820px] flex-col gap-6 py-2 sm:gap-7">
+                  {/* Files / Attachments panel */}
+                  {(() => {
+                    const allImages: { url: string; from: string }[] = [];
+                    for (const msg of selectedConversation.messages) {
+                      if (msg.role === "user" && Array.isArray(msg.content)) {
+                        for (const part of msg.content) {
+                          if (part.type === "image_url" && part.image_url.url) {
+                            allImages.push({ url: part.image_url.url, from: msg.id });
+                          }
+                        }
+                      }
+                    }
+                    if (allImages.length === 0) return null;
+                    return (
+                      <div className="rounded-xl border border-stone-200 bg-stone-50/60 px-3.5 py-2.5 dark:border-white/10 dark:bg-white/[0.02]">
+                        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-stone-500 dark:text-stone-400">
+                          <Paperclip className="size-3" />
+                          Attachments ({allImages.length})
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {allImages.map((img, i) => (
+                            <div key={i} className="group/img relative">
+                              <img
+                                src={img.url}
+                                alt="Attachment"
+                                className="h-14 w-14 rounded-lg border border-stone-200 object-cover transition hover:scale-105 dark:border-white/10 sm:h-16 sm:w-16"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const a = document.createElement("a");
+                                  a.href = img.url;
+                                  a.download = `attachment-${i + 1}.png`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                }}
+                                className="absolute bottom-0.5 right-0.5 inline-flex size-4 items-center justify-center rounded bg-black/50 text-white opacity-0 backdrop-blur-sm transition group-hover/img:opacity-100"
+                                title="Download"
+                              >
+                                <Download className="size-2" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {selectedConversation.messages.map((message, index) => {
                     const isLast = index === selectedConversation.messages.length - 1;
                     const isAssistantStreaming = isLast && message.role === "assistant" && isStreaming;
+                    // Show date separator when date changes between messages
+                    const prevMessage = index > 0 ? selectedConversation.messages[index - 1] : null;
+                    const showDateSep = !prevMessage ||
+                      new Date(message.createdAt).toDateString() !== new Date(prevMessage.createdAt).toDateString();
                     return (
-                      <ChatMessageView
-                        key={message.id}
-                        message={message}
-                        isStreaming={Boolean(isAssistantStreaming)}
-                      />
+                      <React.Fragment key={message.id}>
+                        {showDateSep && <DateSeparator date={message.createdAt} />}
+                        <ChatMessageView
+                          message={message}
+                          isStreaming={Boolean(isAssistantStreaming)}
+                        />
+                      </React.Fragment>
                     );
                   })}
                 </div>
