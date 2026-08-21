@@ -90,7 +90,9 @@ def add_account(
 
     with _lock:
         _load()
-        _accounts = _accounts or []
+        global _accounts
+        if _accounts is None:
+            _accounts = []
         _accounts.append(account)
         _save()
 
