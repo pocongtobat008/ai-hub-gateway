@@ -10,7 +10,7 @@ from services.bansos_provider import bansos_provider
 
 
 def bansos_chat_events(body: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    model = body.get("model", "deepseek-v4-flash-free")
+    model = body.get("model", "mimo-v2.5-free")
     messages = body.get("messages", [])
     try:
         for chunk in bansos_provider.chat_completion(messages=messages, model=model, stream=True):
@@ -22,7 +22,7 @@ def bansos_chat_events(body: dict[str, Any]) -> Iterator[dict[str, Any]]:
 
 
 def bansos_chat_response(body: dict[str, Any]) -> dict[str, Any]:
-    model = body.get("model", "deepseek-v4-flash-free")
+    model = body.get("model", "mimo-v2.5-free")
     messages = body.get("messages", [])
     result = bansos_provider.chat_completion(messages=messages, model=model, stream=False)
     if isinstance(result, dict):

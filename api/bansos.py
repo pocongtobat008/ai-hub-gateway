@@ -45,7 +45,7 @@ def create_router() -> APIRouter:
             raise HTTPException(status_code=400, detail="daemon_url is required")
         models = [m.strip() for m in request.models if m.strip()]
         if not models:
-            models = ["deepseek-v4-flash-free"]  # default
+            models = ["mimo-v2.5-free"]  # default
         account = add_account(url, models, request.label)
         return account
 
@@ -78,7 +78,7 @@ def create_router() -> APIRouter:
         import httpx
         base_url = acc.get("daemon_url", "http://127.0.0.1:17070")
         models = acc.get("models", ["deepseek-v4-flash-free"])
-        test_model = models[0] if models else "deepseek-v4-flash-free"
+        test_model = models[0] if models else "mimo-v2.5-free"
         try:
             url = f"{base_url.rstrip('/')}/v1/chat/completions"
             payload = {"model": test_model, "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5, "stream": False}

@@ -14,30 +14,37 @@ logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 60.0
 
-# Free models seeded from bansos-router
+# Free models seeded from bansos-router (verified working)
 BANSOS_MODELS = [
-    # OpenCode Zen
-    "deepseek-v4-flash-free",
+    # Best performers
     "mimo-v2.5-free",
+    "DeepSeek-V4-Flash-0731",
     "nemotron-3-ultra-free",
+    "gemini-3.1-flash-lite",
     "big-pickle",
-    "laguna-s-2.1-free",
-    # KiloCode
+    "hy3-free",
+    "nemotron-3.5-lightning-free",
+    # KiloCode / OpenRouter free
     "kilo-auto/free",
     "stepfun/step-3.7-flash:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3.5-lightning:free",
     "poolside/laguna-s-2.1:free",
+    "openrouter/free",
+    # Other free
+    "laguna-s-2.1-free",
+    "gpt-oss:20b",
+    "dots-studio/dots-3-note-preview:free",
+    "liquid/lfm-2.5-2.6b:free",
     "cohere/north-mini-code:free",
-    # LLM7
+    # Aliases
     "default",
     "fast",
 ]
 
 
 def is_bansos_model(model: str) -> bool:
-    """Check if model belongs to a bansos account."""
+    """Check if model belongs to a bansos account or is a known bansos model."""
+    if model in BANSOS_MODELS:
+        return True
     from services.bansos_account_service import list_accounts
     for acc in list_accounts():
         if model in (acc.get("models") or []):

@@ -137,7 +137,7 @@ function BansosContent() {
           <Button variant="outline" size="sm" onClick={() => void handleResetAll()} disabled={isRefreshingAll || isResetting} className="gap-1.5">
             <RotateCcw className={`size-4 ${isResetting ? "animate-spin" : ""}`} /> Reset
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => { setForm({ url: "http://127.0.0.1:17070", label: "", modelsText: "deepseek-v4-flash-free" }); setDlgOpen(true); }}>
+          <Button size="sm" className="gap-1.5" onClick={() => { setForm({ url: "http://127.0.0.1:17070", label: "", modelsText: "mimo-v2.5-free" }); setDlgOpen(true); }}>
             <Plus className="size-4" /> Add Daemon
           </Button>
         </div>
@@ -154,7 +154,7 @@ function BansosContent() {
               <li>Select free models → Add</li>
             </ol>
             <div className="text-[11px] text-emerald-600 dark:text-emerald-500">
-              <strong>Free models:</strong> deepseek-v4-flash-free, mimo-v2.5-free, nemotron-3-ultra, kilo-auto/free, and more.
+              <strong>Free models:</strong> mimo-v2.5-free, DeepSeek-V4-Flash-0731, nemotron-3-ultra-free, gemini-3.1-flash-lite, kilo-auto/free, and more.
             </div>
           </CardContent>
         </Card>
@@ -173,7 +173,7 @@ function BansosContent() {
           <Zap className="mb-3 size-8 text-stone-300 dark:text-stone-600" />
           <div className="text-sm font-medium text-stone-600 dark:text-stone-400">No bansos daemons configured</div>
           <div className="mt-1 text-xs text-stone-400">Start bansos-router and add it here</div>
-          <Button size="sm" className="mt-4 gap-1.5" onClick={() => { setForm({ url: "http://127.0.0.1:17070", label: "", modelsText: "deepseek-v4-flash-free" }); setDlgOpen(true); }}><Plus className="size-4" /> Add Daemon</Button>
+          <Button size="sm" className="mt-4 gap-1.5" onClick={() => { setForm({ url: "http://127.0.0.1:17070", label: "", modelsText: "mimo-v2.5-free" }); setDlgOpen(true); }}><Plus className="size-4" /> Add Daemon</Button>
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
