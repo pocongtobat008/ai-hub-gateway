@@ -365,7 +365,14 @@ function OpenCodeAccountsContent() {
 }
 
 export default function OpenCodeAccountsPage() {
-  const { ready } = useAuthGuard();
-  if (!ready) return null;
+  const { isCheckingAuth, session } = useAuthGuard();
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoaderCircle className="size-5 animate-spin text-stone-400" />
+      </div>
+    );
+  }
+  if (!session) return null;
   return <OpenCodeAccountsContent />;
 }
