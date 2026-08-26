@@ -294,7 +294,39 @@ def stream_image_chat_completion(image_outputs: Iterable[ImageOutput], model: st
     yield completion_chunk(model, {}, "stop", completion_id, created)
 
 
+def _detect_provider(model: str) -> str:
+    """Map a model id to its provider label for usage tracking."""
+    from services.gemini_provider import is_gemini_model
+    from services.bansos_provider import is_bansos_model
+    from services.deepseek_provider import is_deepseek_model
+    from services.grok_provider import is_grok_model
+    from services.manus_provider import is_manus_model
+    from services.custom_provider import is_custom_model
+    from services.opencode_provider import is_opencode_model
+    if is_gemini_model(model):
+        return "gemini"
+    if is_bansos_model(model):
+        return "bansos"
+    if is_deepseek_model(model):
+        return "deepseek"
+    if is_grok_model(model):
+        return "grok"
+    if is_manus_model(model):
+        return "manus"
+    if is_custom_model(model):
+        return "custom"
+    if is_opencode_model(model):
+        return "opencode"
+    return "gpt"
+
+
 def handle(body: dict[str, Any]) -> dict[str, Any] | Iterator[dict[str, Any]]:
+    try:
+        from services.usage_service import record as record_usage
+        _model_hint = str(body.get("model") or "auto")
+        record_usage(_model_hint, _detect_provider(_model_hint), stream=bool(body.get("stream")))
+    except Exception:
+        pass
     if body.get("stream"):
         if is_image_chat_request(body):
             return image_chat_events(body)

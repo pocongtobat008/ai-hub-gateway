@@ -1589,3 +1589,52 @@ export async function fetchVoiceOverHistory() {
 export async function deleteVoiceOverAudio(filename: string) {
   return httpRequest<{ ok: boolean }>(`/api/voiceover/${filename}`, { method: "DELETE" });
 }
+
+// ── Dashboard / monitoring ─────────────────────────────────────────
+
+export type DashboardProviderAccount = {
+  provider: string;
+  total: number;
+  statuses: Record<string, number>;
+  models: number | null;
+};
+
+export type DashboardUsageEntry = {
+  requests: number;
+  errors: number;
+  last_used?: number;
+  model?: string;
+  provider?: string;
+  date?: string;
+  ts?: number;
+  error?: string;
+};
+
+export type DashboardOverview = {
+  accounts: DashboardProviderAccount[];
+  totals: {
+    providers: number;
+    accounts: number;
+    healthy_accounts: number;
+    usage_requests: number;
+    usage_errors: number;
+  };
+  gemini_catalog: Array<{ id: string; display_name: string; capabilities: string[]; tier: string }>;
+  usage: {
+    days: number;
+    total_requests: number;
+    total_errors: number;
+    daily: DashboardUsageEntry[];
+    by_model: DashboardUsageEntry[];
+    by_provider: DashboardUsageEntry[];
+    recent_errors: DashboardUsageEntry[];
+  };
+};
+
+export async function fetchDashboardOverview() {
+  return httpRequest<DashboardOverview>("/api/dashboard/overview");
+}
+
+export async function fetchDashboardUsage(days = 14) {
+  return httpRequest<DashboardOverview["usage"]>(`/api/dashboard/usage?days=${days}`);
+}

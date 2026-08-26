@@ -15,6 +15,7 @@ import {
   Gem,
   Globe,
   Image,
+  LayoutDashboard,
   LogOut,
   MessageSquare,
   MessageSquarePlus,
@@ -46,6 +47,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType; badgeKey?
 
 const mainNav: NavItem[] = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/image", label: "Image Gen", icon: Image },
   { href: "/storyboard", label: "Storyboard", icon: Film },
   { href: "/autoclip", label: "AutoClip", icon: Scissors },
