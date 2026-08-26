@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDown, Compass, Download, History, LoaderCircle, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
+import { ChatComposer, type ComposerAccount, type ComposerFile, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
 import { ChatMessageView, DateSeparator } from "./components/chat-message";
 import { CanvasView } from "./components/canvas-view";
 import { streamChatCompletion } from "./components/stream";
@@ -40,6 +40,8 @@ const CHAT_GEM_STORAGE_KEY = "chatgpt2api:chat_last_gem";
 const CHAT_TOOL_STORAGE_KEY = "chatgpt2api:chat_last_tool";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGES = 4;
+const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_FILES = 5;
 const SCROLL_TO_LATEST_THRESHOLD = 160;
 
 // ── Share conversation ──────────────────────────────────────────────────
@@ -145,6 +147,26 @@ function readImage(file: File): Promise<ComposerImage> {
   });
 }
 
+function readFileAsText(file: File): Promise<ComposerFile> {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_FILE_BYTES) {
+      reject(new Error(`${file.name} exceeds 1MB text limit`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(16).slice(2)}`,
+        name: file.name,
+        size: file.size,
+        text: String(reader.result || ""),
+      });
+    };
+    reader.onerror = () => reject(reader.error || new Error(`${file.name} could not be read`));
+    reader.readAsText(file);
+  });
+}
+
 function dataUrlToFile(dataUrl: string, fileName: string, mimeType?: string) {
   const [header, content] = dataUrl.split(",", 2);
   const matchedMimeType = header.match(/data:(.*?);base64/)?.[1];
@@ -189,6 +211,7 @@ function ChatPageContent() {
   const [accounts, setAccounts] = useState<ComposerAccount[]>([]);
   const [tool, setTool] = useState<ComposerTool>("auto");
   const [images, setImages] = useState<ComposerImage[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<ComposerFile[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
@@ -560,6 +583,35 @@ function ChatPageContent() {
     setImages((current) => current.filter((image) => image.id !== id));
   }, []);
 
+  const textFilePattern = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|xml|html?|css|scss|jsx?|tsx?|py|rb|go|rs|java|kt|swift|c|h|cpp|cs|php|sh|bash|zsh|sql|r|lua|pl|ini|cfg|conf|env|log|toml|gitignore|dockerfile|makefile|svg)$/i;
+
+  const isTextReadable = useCallback((file: File) => {
+    if (file.type.startsWith("text/")) return true;
+    if (/\.(json|xml|javascript|typescript|x-sh|x-python|x-yaml|sql|csv)$/i.test(file.type)) return true;
+    return textFilePattern.test(file.name);
+  }, [textFilePattern]);
+
+  const handleFilesChange = useCallback(async (files: File[]) => {
+    if (files.length === 0) {
+      return;
+    }
+    try {
+      const readable = files.filter((file) => {
+        const ok = isTextReadable(file);
+        if (!ok) toast.error(`${file.name}: unsupported type — use images or text/code files`);
+        return ok;
+      });
+      const newFiles = await Promise.all(readable.map(readFileAsText));
+      setAttachedFiles((current) => [...current, ...newFiles].slice(0, MAX_FILES));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to read file");
+    }
+  }, [isTextReadable]);
+
+  const handleRemoveFile = useCallback((id: string) => {
+    setAttachedFiles((current) => current.filter((file) => file.id !== id));
+  }, []);
+
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
   }, []);
@@ -757,18 +809,25 @@ function ChatPageContent() {
 
   const handleSubmit = async () => {
     const text = input.trim();
-    if ((!text && images.length === 0) || streamingRef.current) {
+    if ((!text && images.length === 0 && attachedFiles.length === 0) || streamingRef.current) {
       return;
     }
+
+    // Build file-content blocks so every provider can read the attachments
+    const fileTextParts: Array<{ type: "text"; text: string }> = attachedFiles.map((file) => ({
+      type: "text" as const,
+      text: `[Attached file: ${file.name}]\n\`\`\`\n${file.text}\n\`\`\``,
+    }));
 
     const now = new Date().toISOString();
     const userMessage: ChatMessage = {
       id: createId(),
       role: "user",
       content:
-        images.length > 0
+        images.length > 0 || fileTextParts.length > 0
           ? ([
               ...(text ? [{ type: "text" as const, text }] : []),
+              ...fileTextParts,
               ...images.map((image) => ({
                 type: "image_url" as const,
                 image_url: { url: image.dataUrl },
@@ -803,6 +862,7 @@ function ChatPageContent() {
     setSelectedConversationId(conversationId);
     setInput("");
     setImages([]);
+    setAttachedFiles([]);
     await persistConversation(baseConversation);
 
     if (tool !== "auto" && tool !== "anti-slop") {
@@ -1070,6 +1130,7 @@ function ChatPageContent() {
             accounts={accounts}
             tool={tool}
             images={images}
+            files={attachedFiles}
             isStreaming={isStreaming}
             textareaRef={textareaRef}
             onInputChange={setInput}
@@ -1080,6 +1141,8 @@ function ChatPageContent() {
             onToolChange={setTool}
             onImagesChange={handleImagesChange}
             onRemoveImage={handleRemoveImage}
+            onFilesChange={handleFilesChange}
+            onRemoveFile={handleRemoveFile}
             onSubmit={handleSubmit}
             onStop={handleStop}
           />

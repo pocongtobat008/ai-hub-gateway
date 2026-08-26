@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
+import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, FileText, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
 import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,6 +18,13 @@ export type ComposerImage = {
   id: string;
   name: string;
   dataUrl: string;
+};
+
+export type ComposerFile = {
+  id: string;
+  name: string;
+  size: number;
+  text: string;
 };
 
 export type ComposerGem = {
@@ -54,6 +61,7 @@ type ChatComposerProps = {
   accounts: ComposerAccount[];
   tool: ComposerTool;
   images: ComposerImage[];
+  files: ComposerFile[];
   isStreaming: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   onInputChange: (value: string) => void;
@@ -64,13 +72,15 @@ type ChatComposerProps = {
   onToolChange: (value: ComposerTool) => void;
   onImagesChange: (files: File[]) => void | Promise<void>;
   onRemoveImage: (id: string) => void;
+  onFilesChange: (files: File[]) => void | Promise<void>;
+  onRemoveFile: (id: string) => void;
   onSubmit: () => void | Promise<void>;
   onStop: () => void;
 };
 
 const imageFileNamePattern = /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i;
 
-function isImageFile(file: File) {
+export function isImageFile(file: File) {
   return file.type.startsWith("image/") || (!file.type && imageFileNamePattern.test(file.name));
 }
 
@@ -86,6 +96,7 @@ export function ChatComposer({
   accounts,
   tool,
   images,
+  files,
   isStreaming,
   textareaRef,
   onInputChange,
@@ -96,10 +107,13 @@ export function ChatComposer({
   onToolChange,
   onImagesChange,
   onRemoveImage,
+  onFilesChange,
+  onRemoveFile,
   onSubmit,
   onStop,
 }: ChatComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);
 
@@ -107,10 +121,13 @@ export function ChatComposer({
   const selectedModelLabel = model || "auto";
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
-    if (imageFiles.length === 0) return;
+    const pastedFiles = Array.from(event.clipboardData.files);
+    if (pastedFiles.length === 0) return;
     event.preventDefault();
-    void onImagesChange(imageFiles);
+    const imgs = pastedFiles.filter((file) => file.type.startsWith("image/"));
+    const docs = pastedFiles.filter((file) => !file.type.startsWith("image/"));
+    if (imgs.length > 0) void onImagesChange(imgs);
+    if (docs.length > 0) void onFilesChange(docs);
   };
 
   const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
@@ -134,33 +151,66 @@ export function ChatComposer({
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    const imageFiles = Array.from(event.dataTransfer.files || []).filter(isImageFile);
-    if (event.dataTransfer.files.length > 0 || imageFiles.length > 0) {
+    const dropped = Array.from(event.dataTransfer.files || []);
+    const imageFiles = dropped.filter(isImageFile);
+    const docFiles = dropped.filter((file) => !isImageFile(file));
+    if (dropped.length > 0) {
       event.preventDefault();
       event.stopPropagation();
     }
     setIsDragging(false);
-    if (imageFiles.length === 0) return;
-    void onImagesChange(imageFiles);
+    if (imageFiles.length > 0) void onImagesChange(imageFiles);
+    if (docFiles.length > 0) void onFilesChange(docFiles);
   };
 
   return (
     <div className="shrink-0 flex justify-center px-2 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] sm:px-0 sm:pb-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}>
       <div style={{ width: "min(980px, 100%)" }}>
         <input
-          ref={fileInputRef}
+          ref={imageInputRef}
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif"
           multiple
           className="hidden"
           onChange={(event) => {
-            void onImagesChange(Array.from(event.target.files || []));
+            void onImagesChange(Array.from(event.target.files || []).filter(isImageFile));
+            event.currentTarget.value = "";
+          }}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(event) => {
+            const all = Array.from(event.target.files || []);
+            const docs = all.filter((file) => !isImageFile(file));
+            const imgs = all.filter(isImageFile);
+            if (imgs.length > 0) void onImagesChange(imgs);
+            if (docs.length > 0) void onFilesChange(docs);
             event.currentTarget.value = "";
           }}
         />
 
-        {images.length > 0 ? (
+        {(files.length > 0 || images.length > 0) ? (
           <div className="mb-2 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
+            {files.map((file) => (
+              <div key={file.id} className="relative flex shrink-0 items-center gap-2 rounded-2xl border border-stone-200 bg-white py-2 pr-7 pl-3 dark:border-white/10 dark:bg-white/5">
+                <FileText className="size-4 shrink-0 text-violet-500" />
+                <div className="min-w-0">
+                  <p className="max-w-[140px] truncate text-xs font-medium text-stone-800 dark:text-stone-100">{file.name}</p>
+                  <p className="text-[10px] text-stone-400">{formatFileSize(file.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemoveFile(file.id)}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex size-5 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 transition hover:border-stone-300 hover:text-stone-800 dark:border-white/10 dark:bg-stone-800 dark:text-stone-400"
+                  aria-label={`Remove ${file.name}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
             {images.map((image) => (
               <div key={image.id} className="relative size-14 shrink-0 sm:size-16">
                 <img
@@ -214,7 +264,7 @@ export function ChatComposer({
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-400 bg-white/85 text-sm font-medium text-stone-700 backdrop-blur-[1px] sm:rounded-[32px]">
                 <div className="flex items-center gap-2 rounded-full bg-stone-900 px-4 py-2 text-white shadow-lg dark:bg-stone-200 dark:text-stone-900">
                   <Paperclip className="size-4" />
-                  <span>Drop image to attach</span>
+                  <span>Drop files to attach</span>
                 </div>
               </div>
             ) : null}
@@ -228,11 +278,21 @@ export function ChatComposer({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
-                  aria-label="Attach image"
-                  title="Attach image (paste or drag also works)"
+                  aria-label="Attach file"
+                  title="Attach file or image (paste or drag also works)"
                 >
                   <Paperclip className="size-3.5" />
                   <span className="hidden sm:inline">Attach</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  aria-label="Attach image"
+                  title="Attach image for vision / editing"
+                >
+                  <ImagePlus className="size-3.5" />
+                  <span className="hidden sm:inline">Image</span>
                 </button>
 
                 {/* Tool selector — PROPER DROPDOWN */}
@@ -412,7 +472,13 @@ export function ChatComposer({
 function hasDraggedImages(dataTransfer: DataTransfer) {
   const items = Array.from(dataTransfer.items || []);
   if (items.length > 0) {
-    return items.some((item) => item.kind === "file" && (item.type.startsWith("image/") || !item.type));
+    return items.some((item) => item.kind === "file");
   }
-  return Array.from(dataTransfer.files || []).some(isImageFile);
+  return Array.from(dataTransfer.files || []).length > 0;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

@@ -113,7 +113,15 @@ def build_gemini_prompt(messages: list[dict[str, Any]]) -> tuple[str, list[bytes
         return ""
 
     def image_of(part: Any) -> bytes | None:
-        if not isinstance(part, dict) or part.get("type") != "image_url":
+        if not isinstance(part, dict):
+            return None
+        # Normalized internal format: {"type": "image", "data": <bytes>, "mime": str}
+        if part.get("type") == "image":
+            data = part.get("data")
+            if isinstance(data, (bytes, bytearray)) and data:
+                return bytes(data)
+            return None
+        if part.get("type") != "image_url":
             return None
         image_url = part.get("image_url")
         if isinstance(image_url, str):
@@ -170,10 +178,42 @@ def url_to_bytes(url: str) -> bytes | None:
     return None
 
 
+def _detect_image_extension(data: bytes) -> str:
+    """Detect a file extension from magic bytes so uploads get the right MIME type."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return ".png"
+    if data[:3] == b"\xff\xd8\xff":
+        return ".jpg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    if data[:2] == b"BM":
+        return ".bmp"
+    if data[:4] == b"%PDF":
+        return ".pdf"
+    return ".txt"
+
+
 def _file_inputs(files: list[bytes] | None) -> list[Any] | None:
+    """Materialize attachments as real temp files with correct extensions.
+
+    gemini_webapi uploads unnamed BytesIO/bytes as `input_*.txt` (text/plain),
+    which makes Gemini ignore image attachments. Writing to temp files with the
+    proper extension fixes the upload MIME type.
+    """
     if not files:
         return None
-    return [io.BytesIO(item) for item in files]
+    inputs: list[Any] = []
+    for item in files:
+        extension = _detect_image_extension(item)
+        tmp = tempfile.NamedTemporaryFile(suffix=extension, delete=False)
+        try:
+            tmp.write(item)
+        finally:
+            tmp.close()
+        inputs.append(Path(tmp.name))
+    return inputs
 
 
 class GeminiProvider:

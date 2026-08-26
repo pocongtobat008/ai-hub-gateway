@@ -89,7 +89,21 @@ function CopyButton({
   );
 }
 
-// ── Download helper ────────────────────────────────────────────────────────
+// ── Download helper ────────────────────────────────────────────────────────────────────
+
+const CODE_EXTENSIONS: Record<string, string> = {
+  python: "py", javascript: "js", typescript: "ts", jsx: "jsx", tsx: "tsx",
+  html: "html", css: "css", scss: "scss", json: "json", yaml: "yml", yml: "yml",
+  xml: "xml", markdown: "md", md: "md", bash: "sh", shell: "sh", sh: "sh",
+  sql: "sql", go: "go", rust: "rs", java: "java", kotlin: "kt", swift: "swift",
+  c: "c", cpp: "cpp", csharp: "cs", php: "php", ruby: "rb", toml: "toml",
+  ini: "ini", dockerfile: "Dockerfile", csv: "csv", text: "txt", txt: "txt",
+};
+
+function codeFileName(language?: string) {
+  const ext = language ? CODE_EXTENSIONS[language.toLowerCase()] : undefined;
+  return ext ? `file-${Date.now()}.${ext}` : `code-${Date.now()}.txt`;
+}
 
 function downloadUrl(url: string, filename: string) {
   const a = document.createElement("a");
@@ -250,9 +264,9 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                   />
                   <button
                     type="button"
-                    onClick={() => downloadUrl(`data:text/plain,${encodeURIComponent(codeText)}`, `${language || "code"}.txt`)}
+                    onClick={() => downloadUrl(`data:text/plain,${encodeURIComponent(codeText)}`, codeFileName(language))}
                     className="inline-flex size-6 items-center justify-center rounded-lg text-stone-400 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover/code:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
-                    title="Download code"
+                    title="Download file"
                   >
                     <Download className="size-3" />
                   </button>
@@ -481,7 +495,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
           </span>
         )}
 
-        {/* Actions row: copy + timestamp */}
+        {/* Actions row: copy + download + timestamp */}
         {text && !isStreaming && (
           <div className="mt-2 flex items-center gap-2">
             <CopyButton
@@ -491,6 +505,15 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
               copy={copy}
               label="Copy"
             />
+            <button
+              type="button"
+              onClick={() => downloadUrl(`data:text/markdown,${encodeURIComponent(text)}`, `becomeai-response-${Date.now()}.md`)}
+              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              title="Download response as Markdown file"
+            >
+              <Download className="size-3" />
+              File
+            </button>
             {timeStr && (
               <span className="text-[10px] text-stone-400 dark:text-stone-500 select-none">{timeStr}</span>
             )}

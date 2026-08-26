@@ -394,7 +394,7 @@ function VoiceOverContent() {
                   min="-50"
                   max="100"
                   value={parseInt(rate)}
-                  onChange={(e) => setRate(`${e.target.value >= 0 ? "+" : ""}${e.target.value}%`)}
+                  onChange={(e) => setRate(`${Number(e.target.value) >= 0 ? "+" : ""}${e.target.value}%`)}
                   className="w-full accent-purple-600"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
@@ -414,7 +414,7 @@ function VoiceOverContent() {
                   min="-50"
                   max="50"
                   value={parseInt(pitch)}
-                  onChange={(e) => setPitch(`${e.target.value >= 0 ? "+" : ""}${e.target.value}Hz`)}
+                  onChange={(e) => setPitch(`${Number(e.target.value) >= 0 ? "+" : ""}${e.target.value}Hz`)}
                   className="w-full accent-purple-600"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
@@ -434,7 +434,7 @@ function VoiceOverContent() {
                   min="-50"
                   max="50"
                   value={parseInt(volume)}
-                  onChange={(e) => setVolume(`${e.target.value >= 0 ? "+" : ""}${e.target.value}%`)}
+                  onChange={(e) => setVolume(`${Number(e.target.value) >= 0 ? "+" : ""}${e.target.value}%`)}
                   className="w-full accent-purple-600"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
