@@ -1544,3 +1544,48 @@ export async function resetAllOpenCodeAccounts() {
 export async function fetchOpenCodeModelsFromSource() {
   return httpRequest<{ models: string[]; count: number }>("/api/opencode/fetch-models");
 }
+
+// ── Voice-over ──
+export type VoiceOverVoice = {
+  name: string;
+  gender: string;
+  content_categories: string;
+  personality: string;
+};
+
+export type VoiceOverResult = {
+  id: string;
+  file: string;
+  file_size: number;
+  duration: number;
+  voice: string;
+  text: string;
+  created_at: number;
+};
+
+export async function fetchVoices(language?: string) {
+  const q = language ? `?language=${encodeURIComponent(language)}` : "";
+  return httpRequest<{ voices: VoiceOverVoice[]; total: number }>(`/api/voiceover/voices${q}`);
+}
+
+export async function synthesizeVoice(data: {
+  text: string;
+  voice?: string;
+  rate?: string;
+  pitch?: string;
+  volume?: string;
+}) {
+  return httpRequest<VoiceOverResult>("/api/voiceover/synthesize", {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export async function fetchVoiceOverHistory() {
+  return httpRequest<{ items: VoiceOverResult[]; total: number }>("/api/voiceover/history");
+}
+
+export async function deleteVoiceOverAudio(filename: string) {
+  return httpRequest<{ ok: boolean }>(`/api/voiceover/${filename}`, { method: "DELETE" });
+}

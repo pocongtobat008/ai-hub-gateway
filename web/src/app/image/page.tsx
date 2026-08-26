@@ -1634,7 +1634,7 @@ function ImagePageContent({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-      <section className="mx-auto flex h-[calc(100dvh-6.5rem)] min-h-0 w-full max-w-[1380px] flex-col gap-2 overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-5.25rem)] sm:gap-3 sm:px-3 sm:pb-6">
+      <section className="mx-auto flex h-[calc(100dvh-10rem-env(safe-area-inset-bottom,0px))] min-h-0 w-full max-w-[1380px] flex-col gap-2 overflow-hidden px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:h-[calc(100dvh-5.25rem)] sm:gap-3 sm:px-3 sm:pb-6">
         <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
           <div className="flex items-center justify-between gap-2 px-1">
             <Button

@@ -720,14 +720,26 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
   }
 
-  button, a, [role="button"], input, textarea, select {
-    min-height: 44px;
+  /* CRITICAL: reveal hover-only controls (copy/download/delete buttons)
+     that would otherwise be invisible & unreachable on touch screens */
+  [class*="group-hover:opacity-100"] {
+    opacity: 1 !important;
+  }
+  [class*="group-hover:scale"] {
+    transform: none !important;
   }
 
-  /* Better tap targets for sidebar nav */
+  /* Larger tap targets for nav items only — blanket min-height on ALL buttons
+     breaks dense toolbars and causes overflow on small screens */
   nav a, nav button {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Disable hover-lift transforms that jitter on touch */
+  .hover-lift:hover,
+  .glass-card:hover {
+    transform: none;
   }
 }
 
@@ -877,16 +889,85 @@
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* ── Touch-friendly mobile buttons ─────────────────────────────────────────── */
+/* ── Touch-friendly mobile buttons ─────────────────────────────────────── */
 @media (max-width: 768px) {
-  button, a[role="link"], [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
   /* Compact mobile toolbar */
   .chat-input-wrapper .flex.items-end {
     padding: 6px 10px !important;
+  }
+}
+
+/* ── Mobile hardening: no horizontal overflow, everything visible ─────── */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+
+  /* Media never overflows its container */
+  img, video, canvas, iframe, svg {
+    max-width: 100%;
+  }
+  img, video {
+    height: auto;
+  }
+
+  /* Code blocks scroll horizontally inside themselves, never the page */
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  pre code {
+    white-space: pre;
+    word-break: normal;
+  }
+
+  /* Long URLs / strings wrap instead of pushing layout wide */
+  body {
+    overflow-wrap: break-word;
+  }
+
+  /* Tables live inside their own scroll containers */
+  table {
+    max-width: none;
+  }
+
+  /* Toasts stay within the screen */
+  [data-sonner-toast] {
+    max-width: calc(100vw - 32px) !important;
+  }
+
+  /* Dialogs: comfortable bottom-sheet feel with visible close button */
+  [data-slot="dialog-content"],
+  [data-radix-dialog-content] {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: 88dvh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sheet / drawer panels never exceed screen */
+  [data-slot="sheet-content"],
+  [data-radix-sheet-content] {
+    max-width: 92vw !important;
+  }
+
+  /* Dropdown menus stay in view */
+  [data-slot="dropdown-menu-content"],
+  [data-radix-dropdown-menu-content],
+  [data-radix-popover-content],
+  [data-slot="popover-content"] {
+    max-width: calc(100vw - 24px) !important;
+    max-height: 60dvh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sticky composer respects iOS home bar */
+  .chat-input-wrapper {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 

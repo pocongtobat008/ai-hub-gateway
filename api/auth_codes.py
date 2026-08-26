@@ -1,7 +1,7 @@
 """Auth code management API routes."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from typing import Any
 
@@ -27,18 +27,18 @@ def create_router() -> APIRouter:
     router = APIRouter(prefix="/api/auth-codes", tags=["auth-codes"])
 
     @router.get("/stats")
-    async def stats(authorization: str | None = None):
+    async def stats(authorization: str | None = Header(default=None)):
         require_admin(authorization)
         return get_stats()
 
     @router.get("/list")
-    async def get_codes(authorization: str | None = None):
+    async def get_codes(authorization: str | None = Header(default=None)):
         require_admin(authorization)
         codes = list_codes()
         return {"codes": codes, "total": len(codes)}
 
     @router.post("/generate")
-    async def gen_code(req: GenerateCodeRequest, authorization: str | None = None):
+    async def gen_code(req: GenerateCodeRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         if req.role not in ("admin", "user"):
             raise HTTPException(status_code=400, detail="Role must be 'admin' or 'user'")
@@ -51,14 +51,14 @@ def create_router() -> APIRouter:
         return result
 
     @router.delete("/{code_id}")
-    async def remove_code(code_id: str, authorization: str | None = None):
+    async def remove_code(code_id: str, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         if not delete_code(code_id):
             raise HTTPException(status_code=404, detail="Code not found")
         return {"ok": True}
 
     @router.post("/{code_id}/toggle")
-    async def toggle(code_id: str, authorization: str | None = None):
+    async def toggle(code_id: str, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         from services.auth_code_service import list_codes
         codes = list_codes()
@@ -70,7 +70,7 @@ def create_router() -> APIRouter:
         return {"ok": True, "enabled": new_enabled}
 
     @router.post("/{code_id}/reset")
-    async def reset(code_id: str, authorization: str | None = None):
+    async def reset(code_id: str, authorization: str | None = Header(default=None)):
         require_admin(authorization)
         if not reset_code(code_id):
             raise HTTPException(status_code=404, detail="Code not found")

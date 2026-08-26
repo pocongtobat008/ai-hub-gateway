@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageSquare,
   MessageSquarePlus,
+  Mic,
   PanelLeftClose,
   PanelLeftOpen,
   Paintbrush,
@@ -49,6 +50,7 @@ const mainNav: NavItem[] = [
   { href: "/storyboard", label: "Storyboard", icon: Film },
   { href: "/autoclip", label: "AutoClip", icon: Scissors },
   { href: "/mv-director", label: "MV Director", icon: Clapperboard },
+  { href: "/voiceover", label: "Voice Over", icon: Mic },
   { href: "/gemini", label: "Gemini", icon: Sparkles },
 ];
 
@@ -515,10 +517,11 @@ export function AppSidebar({
           <button
             type="button"
             onClick={() => onMobileOpenChange(false)}
-            className="lg:hidden inline-flex size-6 shrink-0 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:scale-110"
+            className="lg:hidden inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95"
+            aria-label="Close menu"
             title="Close menu"
           >
-            <PanelLeftClose className="size-3.5" />
+            <PanelLeftClose className="size-4" />
           </button>
         </div>
       </div>
@@ -713,10 +716,11 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="inline-flex size-6 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 hover:scale-110 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-100 active:scale-95 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+              aria-label="Logout"
               title="Logout"
             >
-              <LogOut className="size-3" />
+              <LogOut className="size-4" />
             </button>
           </div>
         </div>

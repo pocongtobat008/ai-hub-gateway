@@ -211,7 +211,8 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
           className="flex-1 min-w-0 transition-all duration-300"
           style={{ marginLeft: sidebarWidth }}
         >
-          <div className="min-h-screen px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
+          {/* Mobile: pt-14 reserves space under the floating hamburger button */}
+          <div className="min-h-screen px-2 pt-14 pb-2 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
             <PageTransition>
               {children}
             </PageTransition>

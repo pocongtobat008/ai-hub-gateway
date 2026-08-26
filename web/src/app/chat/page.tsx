@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Compass, Download, History, LoaderCircle, Menu, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
+import { ArrowDown, Compass, Download, History, LoaderCircle, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
@@ -816,18 +816,10 @@ function ChatPageContent() {
 
   return (
     <>
-      <section className="mx-auto grid h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-0.5rem)] min-h-0 w-full overflow-hidden px-0 sm:h-[calc(100dvh-3rem)] sm:pb-6">
+      <section className="mx-auto grid h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom,0px))] min-h-0 w-full overflow-hidden px-0 sm:h-[calc(100dvh-3rem)] sm:pb-6">
         <div className="flex min-h-0 flex-col gap-2 sm:gap-4">
           <div className="flex items-center gap-2 px-1 py-1 lg:hidden">
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white/90 text-stone-600 shadow-sm transition-all active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
-              onClick={() => (window as any).__sidebarOpenMobile?.()}
-              aria-label="Open menu"
-            >
-              <Menu className="size-5" />
-            </button>
-            <div className="flex-1 truncate text-sm font-semibold text-stone-800 dark:text-stone-200">
+            <div className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-stone-800 dark:text-stone-200">
               {selectedConversation?.title || 'New chat'}
               {tool === 'anti-slop' && (
                 <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -837,7 +829,7 @@ function ChatPageContent() {
             </div>
             <button
               type="button"
-              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-stone-900 px-3 text-sm font-medium text-white shadow-sm transition-all active:scale-95 dark:bg-stone-100 dark:text-stone-900"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-stone-900 px-3 text-sm font-medium text-white shadow-sm transition-all active:scale-95 dark:bg-stone-100 dark:text-stone-900"
               onClick={handleCreateDraft}
             >
               <Plus className="size-4" />
