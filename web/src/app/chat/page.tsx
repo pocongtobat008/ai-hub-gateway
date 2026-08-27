@@ -1051,11 +1051,13 @@ function ChatPageContent() {
                       </div>
                     );
                   })()}
-                  {selectedConversation.messages.map((message, index) => {
+                  {selectedConversation.messages.filter((m) => m.role !== "system").map((message, displayIndex) => {
+                    // Map back to original index for conversation data
+                    const index = selectedConversation.messages.indexOf(message);
                     const isLast = index === selectedConversation.messages.length - 1;
                     const isAssistantStreaming = isLast && message.role === "assistant" && isStreaming;
                     // Show date separator when date changes between messages
-                    const prevMessage = index > 0 ? selectedConversation.messages[index - 1] : null;
+                    const prevMessage = displayIndex > 0 ? selectedConversation.messages.filter((m) => m.role !== "system")[displayIndex - 1] : null;
                     const showDateSep = !prevMessage ||
                       new Date(message.createdAt).toDateString() !== new Date(prevMessage.createdAt).toDateString();
                     // Check if this assistant message has code blocks (canvas mode)
