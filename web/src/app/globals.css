@@ -897,6 +897,11 @@
   }
 }
 
+/* ── Auto-resize textarea smooth transition ─────────────────────────── */
+[data-slot="textarea"] {
+  transition: height 0.15s ease-out;
+}
+
 /* ── Mobile hardening: no horizontal overflow, everything visible ─────── */
 @media (max-width: 768px) {
   html, body {

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, FileText, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
-import { useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -119,6 +119,19 @@ export function ChatComposer({
 
   const selectedTool = TOOL_OPTIONS.find((t) => t.value === tool) || TOOL_OPTIONS[0];
   const selectedModelLabel = model || "auto";
+
+  // ── Auto-resize textarea ──────────────────────────────────────────
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxPx = 240; // ~10 lines
+    el.style.height = `${Math.min(el.scrollHeight, maxPx)}px`;
+  }, [textareaRef]);
+
+  useEffect(() => {
+    autoResize();
+  }, [input, autoResize]);
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const pastedFiles = Array.from(event.clipboardData.files);
@@ -244,8 +257,7 @@ export function ChatComposer({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => textareaRef.current?.focus()}
-          >
-            <Textarea
+          >              <Textarea
               ref={textareaRef}
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
@@ -258,7 +270,7 @@ export function ChatComposer({
                   if (!isStreaming) void onSubmit();
                 }
               }}
-              className="max-h-40 min-h-[56px] resize-none rounded-[24px] border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-6 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 dark:text-stone-100 dark:placeholder:text-stone-500 sm:min-h-[64px] sm:px-6 sm:pt-5 sm:pb-3 sm:text-base"
+              className="min-h-[48px] max-h-[240px] resize-none overflow-y-auto rounded-[24px] border-0 bg-transparent px-4 pt-3.5 pb-2 text-[15px] leading-6 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 dark:text-stone-100 dark:placeholder:text-stone-500 sm:min-h-[56px] sm:px-6 sm:pt-4 sm:pb-3 sm:text-base"
             />
             {isDragging ? (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[24px] border-2 border-dashed border-stone-400 bg-white/85 text-sm font-medium text-stone-700 backdrop-blur-[1px] sm:rounded-[32px]">
@@ -270,28 +282,28 @@ export function ChatComposer({
             ) : null}
 
             {/* Bottom toolbar */}
-            <div className="flex items-end justify-between gap-1.5 rounded-b-[20px] border-t border-stone-100/80 bg-white/80 px-2 pt-2 pb-2.5 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3 sm:gap-2" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-end justify-between gap-1.5 rounded-b-[20px] border-t border-stone-100/80 bg-white/80 px-1.5 pt-1.5 pb-2 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3 sm:gap-2" onClick={(event) => event.stopPropagation()}>
               <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
 
                 {/* Image / File attach */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-stone-200/60 bg-white/50 text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[40px] min-w-[40px] sm:h-9 sm:px-3.5 sm:min-w-auto sm:justify-start sm:gap-1.5 sm:text-xs dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach file"
                   title="Attach file or image (paste or drag also works)"
                 >
-                  <Paperclip className="size-3.5" />
+                  <Paperclip className="size-4 sm:size-3.5" />
                   <span className="hidden sm:inline">Attach</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-xs font-medium text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[36px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-stone-200/60 bg-white/50 text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[40px] min-w-[40px] sm:h-9 sm:px-3.5 sm:min-w-auto sm:justify-start sm:gap-1.5 sm:text-xs dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                   aria-label="Attach image"
                   title="Attach image for vision / editing"
                 >
-                  <ImagePlus className="size-3.5" />
+                  <ImagePlus className="size-4 sm:size-3.5" />
                   <span className="hidden sm:inline">Image</span>
                 </button>
 
@@ -301,13 +313,13 @@ export function ChatComposer({
                     <button
                       type="button"
                       className={cn(
-                        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:px-3.5",
+                        "inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-all duration-200 min-h-[40px] sm:h-9 sm:px-3.5 sm:justify-start",
                         tool === "auto"
                           ? "border border-stone-200/60 bg-white/50 text-stone-500 hover:bg-stone-50 hover:text-stone-700 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
                           : "bg-stone-900 text-white shadow-sm dark:bg-white dark:text-stone-900",
                       )}
                     >
-                      <selectedTool.icon className="size-3.5" />
+                      <selectedTool.icon className="size-4 sm:size-3.5" />
                       <span className="hidden sm:inline">{selectedTool.label}</span>
                       <svg className="size-3 opacity-50" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 5l3 3 3-3" />
@@ -353,7 +365,7 @@ export function ChatComposer({
                 <div className="relative shrink-0">
                   <Select value={model} onValueChange={onModelChange}>
                     <SelectTrigger
-                      className="h-8 max-w-[160px] rounded-full border-stone-200/60 bg-white/50 text-xs font-medium text-stone-600 shadow-none backdrop-blur-sm sm:h-9 sm:max-w-[200px]"
+                      className="h-9 max-w-[140px] rounded-full border-stone-200/60 bg-white/50 text-xs font-medium text-stone-600 shadow-none backdrop-blur-sm min-h-[40px] sm:h-9 sm:max-w-[200px]"
                       aria-label="Model"
                     >
                       <div className="flex min-w-0 items-center gap-1.5">
@@ -442,20 +454,20 @@ export function ChatComposer({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 animate-pulse-soft min-h-[36px] min-w-[36px] dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 animate-pulse-soft min-h-[44px] min-w-[44px] dark:border-white/15 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-rose-500/10 sm:size-10"
                   aria-label="Stop generating"
                 >
-                  <Square className="size-3.5 fill-current sm:size-4" />
+                  <Square className="size-4 fill-current sm:size-4" />
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => void onSubmit()}
                   disabled={!input.trim() && images.length === 0}
-                  className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none disabled:hover:scale-100 min-h-[36px] min-w-[36px] dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-700 dark:disabled:text-stone-400 sm:size-10"
+                  className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-200 hover:bg-stone-800 hover:shadow-xl hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none disabled:hover:scale-100 min-h-[44px] min-w-[44px] dark:bg-stone-200 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-700 dark:disabled:text-stone-400 sm:size-10"
                   aria-label="Send message"
                 >
-                  <ArrowUp className="size-3.5 sm:size-4" />
+                  <ArrowUp className="size-4 sm:size-4" />
                 </button>
               )}
             </div>

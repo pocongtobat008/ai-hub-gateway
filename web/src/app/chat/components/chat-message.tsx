@@ -379,7 +379,7 @@ const UserMessage = React.memo(function UserMessage({ message }: { message: Chat
 
   return (
     <div className="flex justify-end gap-3 animate-message-appear">
-      <div className="max-w-[85%] sm:max-w-[75%]">
+      <div className="max-w-full sm:max-w-[75%]">
         {/* Image uploads */}
         {images.length > 0 && (
           <div className="mb-2 flex flex-wrap justify-end gap-2">
