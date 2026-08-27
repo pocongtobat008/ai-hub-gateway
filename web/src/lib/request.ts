@@ -85,7 +85,10 @@ export async function httpRequest<T>(path: string, options: RequestOptions = {})
         url: path,
         method,
         data: body,
-        headers,
+        headers: {
+            ...(body ? {"Content-Type": "application/json"} : {}),
+            ...headers,
+        },
         redirectOnUnauthorized,
     };
     const response = await request.request<T>(config);

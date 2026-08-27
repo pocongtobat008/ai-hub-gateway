@@ -2,14 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  BookOpen,
+  Briefcase,
   Bot,
+  Brain,
   Check,
+  ChevronDown,
+  Code,
+  FileSearch,
   Globe,
+  GraduationCap,
+  Languages,
   LoaderCircle,
   MessageSquare,
+  Palette,
+  PenTool,
   Plus,
+  Search,
   Sparkles,
-  Trash2,
   User,
   X,
 } from "lucide-react";
@@ -35,63 +45,102 @@ type ProfilePopupProps = {
   onClose: () => void;
 };
 
+// ── Icon map for skills (replace emoji with lucide icons) ────────────────────
+
+const SKILL_ICONS: Record<string, React.ElementType> = {
+  code: Code,
+  pen: PenTool,
+  chart: FileSearch,
+  globe: Globe,
+  graduation: GraduationCap,
+  palette: Palette,
+  search: Search,
+  briefcase: Briefcase,
+  book: BookOpen,
+  brain: Brain,
+  bot: Bot,
+  language: Languages,
+  message: MessageSquare,
+  sparkles: Sparkles,
+};
+
+function SkillIcon({ icon, className }: { icon: string; className?: string }) {
+  // If it's a lucide icon key, use it
+  const LucideIcon = SKILL_ICONS[icon];
+  if (LucideIcon) return <LucideIcon className={className} />;
+  // Otherwise render as text (for custom emoji)
+  return <span className={className} style={{ fontSize: "1.1em" }}>{icon}</span>;
+}
+
+// ── Personality options ──────────────────────────────────────────────────────
+
 const TONE_OPTIONS = [
-  { value: "friendly", label: "Friendly", icon: "😊" },
-  { value: "professional", label: "Professional", icon: "💼" },
-  { value: "casual", label: "Casual", icon: "😎" },
-  { value: "formal", label: "Formal", icon: "🎩" },
-  { value: "humorous", label: "Humorous", icon: "😄" },
-  { value: "direct", label: "Direct", icon: "🎯" },
+  { value: "friendly", label: "Friendly", desc: "Warm and approachable" },
+  { value: "professional", label: "Professional", desc: "Clear and business-like" },
+  { value: "casual", label: "Casual", desc: "Relaxed and informal" },
+  { value: "formal", label: "Formal", desc: "Structured and proper" },
+  { value: "humorous", label: "Humorous", desc: "Witty and fun" },
+  { value: "direct", label: "Direct", desc: "Straight to the point" },
 ];
 
 const LANGUAGE_OPTIONS = [
-  { value: "auto", label: "Auto (detect)" },
+  { value: "auto", label: "Auto" },
   { value: "english", label: "English" },
   { value: "indonesian", label: "Indonesian" },
   { value: "japanese", label: "Japanese" },
   { value: "chinese", label: "Chinese" },
   { value: "spanish", label: "Spanish" },
   { value: "arabic", label: "Arabic" },
+  { value: "french", label: "French" },
 ];
 
 const VERBOSITY_OPTIONS = [
-  { value: "concise", label: "Concise" },
-  { value: "balanced", label: "Balanced" },
-  { value: "detailed", label: "Detailed" },
+  { value: "concise", label: "Concise", desc: "Short and to the point" },
+  { value: "balanced", label: "Balanced", desc: "Moderate detail" },
+  { value: "detailed", label: "Detailed", desc: "Thorough explanations" },
 ];
 
 const EXPERTISE_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-  { value: "expert", label: "Expert" },
+  { value: "beginner", label: "Beginner", desc: "New to the topic" },
+  { value: "intermediate", label: "Intermediate", desc: "Some experience" },
+  { value: "advanced", label: "Advanced", desc: "Experienced user" },
+  { value: "expert", label: "Expert", desc: "Deep knowledge" },
 ];
+
+// ── Built-in skills with lucide icons ────────────────────────────────────────
+
+const BUILTIN_SKILLS: Record<string, { icon: string; label: string; desc: string }> = {
+  "code-helper": { icon: "code", label: "Code Helper", desc: "Write, debug, and explain code" },
+  "creative-writer": { icon: "pen", label: "Creative Writer", desc: "Stories, articles, creative content" },
+  "data-analyst": { icon: "chart", label: "Data Analyst", desc: "Analyze data and find insights" },
+  "translator": { icon: "language", label: "Translator", desc: "Translate between languages" },
+  "tutor": { icon: "graduation", label: "Tutor", desc: "Explain concepts step by step" },
+  "image-expert": { icon: "palette", label: "Image Expert", desc: "Generate image prompts" },
+  "researcher": { icon: "search", label: "Researcher", desc: "Deep research with citations" },
+  "business-advisor": { icon: "briefcase", label: "Business Advisor", desc: "Strategy and financial advice" },
+};
 
 export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"personality" | "skills" | "instructions">("personality");
   const [isSaving, setIsSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  // Add skill dialog
+  // Add skill
   const [addSkillOpen, setAddSkillOpen] = useState(false);
-  const [newSkill, setNewSkill] = useState({ id: "", name: "", description: "", icon: "🧩", system_prompt: "" });
+  const [newSkill, setNewSkill] = useState({ id: "", name: "", description: "", icon: "sparkles", system_prompt: "" });
 
   const loadProfile = useCallback(async () => {
     try {
       const data = await fetchProfile();
       setProfile(data);
-    } catch {
-      // ignore
-    } finally {
-      setIsLoading(false);
-    }
+    } catch { /* ignore */ }
+    finally { setIsLoading(false); }
   }, []);
 
   useEffect(() => {
-    if (open) {
-      void loadProfile();
-    }
+    if (open) { void loadProfile(); }
   }, [open, loadProfile]);
 
   const handleSavePersonality = async () => {
@@ -101,11 +150,8 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
       await updatePersonality(profile.personality);
       await updateProfile({ display_name: profile.display_name, avatar_emoji: profile.avatar_emoji });
       toast.success("Personality saved!");
-    } catch {
-      toast.error("Failed to save");
-    } finally {
-      setIsSaving(false);
-    }
+    } catch { toast.error("Failed to save"); }
+    finally { setIsSaving(false); }
   };
 
   const handleSaveInstructions = async () => {
@@ -114,27 +160,26 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
     try {
       await updateInstructions({ custom_instructions: profile.custom_instructions });
       toast.success("Instructions saved!");
-    } catch {
-      toast.error("Failed to save");
-    } finally {
-      setIsSaving(false);
-    }
+    } catch { toast.error("Failed to save"); }
+    finally { setIsSaving(false); }
   };
 
-  const handleToggleSkill = async (skillId: string, enabled: boolean) => {
+  const handleToggleSkill = async (skillId: string) => {
+    if (!profile) return;
+    const skill = profile.skills.find((s) => s.id === skillId);
+    if (!skill) return;
+    const newEnabled = !skill.enabled;
+    setTogglingId(skillId);
     try {
-      await toggleSkill(skillId, enabled);
+      await toggleSkill(skillId, newEnabled);
       setProfile((prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          skills: prev.skills.map((s) => (s.id === skillId ? { ...s, enabled } : s)),
-        };
+        return { ...prev, skills: prev.skills.map((s) => (s.id === skillId ? { ...s, enabled: newEnabled } : s)) };
       });
-      toast.success(enabled ? "Skill enabled!" : "Skill disabled");
-    } catch {
-      toast.error("Failed to toggle skill");
-    }
+      toast.success(newEnabled ? `"${skill.name}" enabled` : `"${skill.name}" disabled`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Toggle failed");
+    } finally { setTogglingId(null); }
   };
 
   const handleAddSkill = async () => {
@@ -145,75 +190,70 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
     try {
       const result = await addSkill(newSkill);
       if (result.ok && result.skill) {
-        setProfile((prev) => {
-          if (!prev) return prev;
-          return { ...prev, skills: [...prev.skills, result.skill!] };
-        });
+        setProfile((prev) => prev ? { ...prev, skills: [...prev.skills, result.skill!] } : prev);
         setAddSkillOpen(false);
-        setNewSkill({ id: "", name: "", description: "", icon: "🧩", system_prompt: "" });
+        setNewSkill({ id: "", name: "", description: "", icon: "sparkles", system_prompt: "" });
         toast.success("Skill added!");
       }
-    } catch {
-      toast.error("Failed to add skill");
-    }
+    } catch { toast.error("Failed to add skill"); }
   };
 
   const handleDeleteSkill = async (skillId: string) => {
     try {
       await deleteSkill(skillId);
-      setProfile((prev) => {
-        if (!prev) return prev;
-        return { ...prev, skills: prev.skills.filter((s) => s.id !== skillId) };
-      });
+      setProfile((prev) => prev ? { ...prev, skills: prev.skills.filter((s) => s.id !== skillId) } : prev);
       toast.success("Skill deleted");
-    } catch {
-      toast.error("Failed to delete skill");
-    }
+    } catch { toast.error("Failed to delete"); }
   };
 
   if (!open) return null;
 
+  const enabledCount = profile?.skills.filter((s) => s.enabled).length || 0;
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      {/* Popup */}
-      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl dark:border-white/10 dark:bg-stone-900 sm:max-h-[85vh]" style={{ maxHeight: '85dvh' }}>
+      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl dark:border-white/10 dark:bg-stone-900" style={{ maxHeight: "88dvh" }}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-white">
-              <User className="size-5" />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+              <Sparkles className="size-5" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-stone-900 dark:text-white">Profile & Personalization</h2>
-              <p className="text-[11px] text-stone-400">Customize how AI responds to you</p>
+              <h2 className="text-sm font-bold text-stone-900 dark:text-white">Profile & Personalization</h2>
+              <p className="text-[11px] text-stone-400">Shape how AI responds to you</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-full p-1.5 transition hover:bg-stone-100 dark:hover:bg-white/10">
+          <button onClick={onClose} className="rounded-xl p-2 transition hover:bg-stone-100 dark:hover:bg-white/10">
             <X className="size-4 text-stone-400" />
           </button>
         </div>
 
         {/* Tabs */}
         <div className="flex border-b border-stone-100 px-5 dark:border-white/10">
-          {[
-            { key: "personality" as const, label: "Personality", icon: Sparkles },
-            { key: "skills" as const, label: "Skills", icon: Bot },
-            { key: "instructions" as const, label: "Instructions", icon: MessageSquare },
-          ].map(({ key, label, icon: Icon }) => (
+          {([
+            { key: "personality" as const, label: "Personality", icon: Brain, count: null },
+            { key: "skills" as const, label: "Skills", icon: Bot, count: enabledCount },
+            { key: "instructions" as const, label: "Instructions", icon: MessageSquare, count: null },
+          ]).map(({ key, label, icon: Icon, count }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition ${
+              className={`relative flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-all ${
                 activeTab === key
-                  ? "border-stone-900 text-stone-900 dark:border-white dark:text-white"
+                  ? "border-violet-500 text-violet-600 dark:text-violet-400"
                   : "border-transparent text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
               }`}
             >
               <Icon className="size-3.5" />
               {label}
+              {count !== null && count > 0 && (
+                <span className="ml-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                  {count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -228,39 +268,36 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
             <p className="py-8 text-center text-sm text-stone-400">Failed to load profile</p>
           ) : (
             <>
-              {/* Personality Tab */}
+              {/* ─── Personality Tab ───────────────────────────────────────── */}
               {activeTab === "personality" && (
                 <div className="space-y-5">
-                  {/* Name & Avatar */}
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{profile.avatar_emoji}</div>
-                    <div className="flex-1">
-                      <label className="mb-1 block text-[11px] font-medium text-stone-500">Display Name</label>
-                      <Input
-                        value={profile.display_name}
-                        onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
-                        className="h-9 text-sm"
-                        placeholder="Your name"
-                      />
-                    </div>
+                  {/* Name */}
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Display Name</label>
+                    <Input
+                      value={profile.display_name}
+                      onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
+                      className="h-9 text-sm"
+                      placeholder="Your name"
+                    />
                   </div>
 
                   {/* Tone */}
                   <div>
-                    <label className="mb-2 block text-[11px] font-medium text-stone-500">Tone</label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {TONE_OPTIONS.map(({ value, label, icon }) => (
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Communication Tone</label>
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                      {TONE_OPTIONS.map(({ value, label, desc }) => (
                         <button
                           key={value}
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, tone: value } })}
-                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs transition ${
+                          className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
                             profile.personality.tone === value
-                              ? "border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-900"
-                              : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
+                              ? "border-violet-500 bg-violet-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/10"
+                              : "border-stone-100 bg-white hover:border-stone-200 hover:bg-stone-50 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10"
                           }`}
                         >
-                          <span>{icon}</span>
-                          <span>{label}</span>
+                          <p className={`text-xs font-semibold ${profile.personality.tone === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
                     </div>
@@ -268,16 +305,16 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
 
                   {/* Language */}
                   <div>
-                    <label className="mb-2 block text-[11px] font-medium text-stone-500">Language</label>
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Response Language</label>
+                    <div className="flex flex-wrap gap-1.5">
                       {LANGUAGE_OPTIONS.map(({ value, label }) => (
                         <button
                           key={value}
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, language: value } })}
-                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                             profile.personality.language === value
-                              ? "border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-900"
-                              : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
+                              ? "border-violet-500 bg-violet-50 text-violet-700 dark:border-violet-400 dark:bg-violet-500/10 dark:text-violet-300"
+                              : "border-stone-100 bg-white text-stone-500 hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02] dark:text-stone-400"
                           }`}
                         >
                           {label}
@@ -288,19 +325,20 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
 
                   {/* Verbosity */}
                   <div>
-                    <label className="mb-2 block text-[11px] font-medium text-stone-500">Verbosity</label>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Response Length</label>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {VERBOSITY_OPTIONS.map(({ value, label }) => (
+                      {VERBOSITY_OPTIONS.map(({ value, label, desc }) => (
                         <button
                           key={value}
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, verbosity: value } })}
-                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                          className={`rounded-xl border px-3 py-2.5 text-center transition-all ${
                             profile.personality.verbosity === value
-                              ? "border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-900"
-                              : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
+                              ? "border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10"
+                              : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02]"
                           }`}
                         >
-                          {label}
+                          <p className={`text-xs font-semibold ${profile.personality.verbosity === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
                     </div>
@@ -308,118 +346,114 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
 
                   {/* Expertise */}
                   <div>
-                    <label className="mb-2 block text-[11px] font-medium text-stone-500">Your Expertise Level</label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {EXPERTISE_OPTIONS.map(({ value, label }) => (
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Your Expertise Level</label>
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                      {EXPERTISE_OPTIONS.map(({ value, label, desc }) => (
                         <button
                           key={value}
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, expertise_level: value } })}
-                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                          className={`rounded-xl border px-3 py-2 text-center transition-all ${
                             profile.personality.expertise_level === value
-                              ? "border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-900"
-                              : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 dark:border-white/10 dark:bg-white/5 dark:text-stone-300"
+                              ? "border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10"
+                              : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02]"
                           }`}
                         >
-                          {label}
+                          <p className={`text-xs font-semibold ${profile.personality.expertise_level === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <Button onClick={() => void handleSavePersonality()} disabled={isSaving} className="w-full">
-                    {isSaving ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
+                  <Button onClick={() => void handleSavePersonality()} disabled={isSaving} className="w-full bg-violet-600 hover:bg-violet-700">
+                    {isSaving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                     Save Personality
                   </Button>
                 </div>
               )}
 
-              {/* Skills Tab */}
+              {/* ─── Skills Tab ────────────────────────────────────────────── */}
               {activeTab === "skills" && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-stone-500">Enable skills to shape AI behavior</p>
+                    <p className="text-xs text-stone-500">{enabledCount} skill{enabledCount !== 1 ? "s" : ""} active</p>
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setAddSkillOpen(true)}>
                       <Plus className="size-3" />
-                      Add Skill
+                      Custom
                     </Button>
                   </div>
 
-                  {profile.skills.map((skill) => (
-                    <div
-                      key={skill.id}
-                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
-                        skill.enabled
-                          ? "border-stone-900 bg-stone-50 dark:border-white/20 dark:bg-white/5"
-                          : "border-stone-100 bg-white dark:border-white/5 dark:bg-white/[0.02]"
-                      }`}
-                    >
-                      <span className="text-xl">{skill.icon}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-stone-800 dark:text-stone-200">{skill.name}</p>
-                        <p className="truncate text-[11px] text-stone-400">{skill.description}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {!skill.id.startsWith("code-helper") && !skill.id.startsWith("creative-") && !skill.id.startsWith("data-") && !skill.id.startsWith("translator") && !skill.id.startsWith("tutor") && !skill.id.startsWith("image-expert") && !skill.id.startsWith("researcher") && !skill.id.startsWith("business-") && (
-                          <button
-                            onClick={() => void handleDeleteSkill(skill.id)}
-                            className="rounded-lg p-1 text-stone-400 transition hover:bg-rose-50 hover:text-rose-500"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => void handleToggleSkill(skill.id, !skill.enabled)}
-                          className={`flex size-7 items-center justify-center rounded-full transition ${
-                            skill.enabled
-                              ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900"
-                              : "bg-stone-100 text-stone-400 hover:bg-stone-200 dark:bg-white/10"
-                          }`}
-                        >
-                          <Check className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {profile.skills.map((skill) => {
+                    const builtin = BUILTIN_SKILLS[skill.id];
+                    const iconKey = builtin?.icon || "sparkles";
+                    const label = builtin?.label || skill.name;
+                    const desc = builtin?.desc || skill.description;
 
-                  {/* Add Skill Dialog */}
+                    return (
+                      <div
+                        key={skill.id}
+                        className={`group flex items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
+                          skill.enabled
+                            ? "border-violet-200 bg-violet-50/50 dark:border-violet-500/20 dark:bg-violet-500/5"
+                            : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10"
+                        }`}
+                      >
+                        <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition ${
+                          skill.enabled
+                            ? "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400"
+                            : "bg-stone-100 text-stone-400 dark:bg-white/5 dark:text-stone-500"
+                        }`}>
+                          <SkillIcon icon={iconKey} className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs font-semibold ${skill.enabled ? "text-stone-800 dark:text-stone-100" : "text-stone-600 dark:text-stone-300"}`}>
+                            {label}
+                          </p>
+                          <p className="truncate text-[11px] text-stone-400">{desc}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {!skill.id.startsWith("code-helper") && !skill.id.startsWith("creative-") && !skill.id.startsWith("data-") && !skill.id.startsWith("translator") && !skill.id.startsWith("tutor") && !skill.id.startsWith("image-expert") && !skill.id.startsWith("researcher") && !skill.id.startsWith("business-") && (
+                            <button
+                              onClick={() => void handleDeleteSkill(skill.id)}
+                              className="rounded-lg p-1.5 text-stone-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100 dark:text-stone-600"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => void handleToggleSkill(skill.id)}
+                            disabled={togglingId === skill.id}
+                            className={`flex size-8 items-center justify-center rounded-full border-2 transition-all ${
+                              skill.enabled
+                                ? "border-violet-500 bg-violet-500 text-white shadow-sm shadow-violet-500/25"
+                                : "border-stone-200 bg-white text-stone-300 hover:border-stone-300 dark:border-white/10 dark:bg-transparent dark:text-stone-600"
+                            }`}
+                          >
+                            {togglingId === skill.id ? (
+                              <LoaderCircle className="size-3.5 animate-spin" />
+                            ) : (
+                              <Check className="size-3.5" strokeWidth={3} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Skill Form */}
                   {addSkillOpen && (
-                    <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4 dark:border-white/20 dark:bg-white/5">
-                      <p className="mb-3 text-xs font-medium text-stone-600 dark:text-stone-300">New Custom Skill</p>
+                    <div className="rounded-xl border border-dashed border-violet-300 bg-violet-50/50 p-4 dark:border-violet-500/30 dark:bg-violet-500/5">
+                      <p className="mb-3 text-xs font-semibold text-violet-700 dark:text-violet-300">New Custom Skill</p>
                       <div className="space-y-2">
                         <div className="flex gap-2">
-                          <Input
-                            value={newSkill.id}
-                            onChange={(e) => setNewSkill({ ...newSkill, id: e.target.value })}
-                            placeholder="skill-id"
-                            className="h-8 text-xs"
-                          />
-                          <Input
-                            value={newSkill.name}
-                            onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                            placeholder="Skill name"
-                            className="h-8 text-xs"
-                          />
+                          <Input value={newSkill.id} onChange={(e) => setNewSkill({ ...newSkill, id: e.target.value })} placeholder="skill-id (e.g. math-tutor)" className="h-8 text-xs" />
+                          <Input value={newSkill.name} onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })} placeholder="Skill name" className="h-8 text-xs" />
                         </div>
-                        <Input
-                          value={newSkill.description}
-                          onChange={(e) => setNewSkill({ ...newSkill, description: e.target.value })}
-                          placeholder="Description"
-                          className="h-8 text-xs"
-                        />
-                        <Textarea
-                          value={newSkill.system_prompt}
-                          onChange={(e) => setNewSkill({ ...newSkill, system_prompt: e.target.value })}
-                          placeholder="System prompt for this skill..."
-                          className="min-h-[60px] text-xs"
-                          rows={2}
-                        />
+                        <Input value={newSkill.description} onChange={(e) => setNewSkill({ ...newSkill, description: e.target.value })} placeholder="Short description" className="h-8 text-xs" />
+                        <Textarea value={newSkill.system_prompt} onChange={(e) => setNewSkill({ ...newSkill, system_prompt: e.target.value })} placeholder="System prompt: tell AI how to behave when this skill is active..." className="min-h-[60px] text-xs" rows={2} />
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => setAddSkillOpen(false)} className="text-xs">
-                            Cancel
-                          </Button>
-                          <Button size="sm" onClick={() => void handleAddSkill()} className="text-xs">
-                            Add
-                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setAddSkillOpen(false)} className="text-xs">Cancel</Button>
+                          <Button size="sm" onClick={() => void handleAddSkill()} className="bg-violet-600 hover:bg-violet-700 text-xs">Add Skill</Button>
                         </div>
                       </div>
                     </div>
@@ -427,35 +461,36 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                 </div>
               )}
 
-              {/* Instructions Tab */}
+              {/* ─── Instructions Tab ──────────────────────────────────────── */}
               {activeTab === "instructions" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block text-[11px] font-medium text-stone-500">Custom Instructions</label>
-                    <p className="mb-2 text-[11px] text-stone-400">
-                      Tell the AI how to behave. These instructions are injected into every chat.
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-stone-500">Custom Instructions</label>
+                    <p className="mb-3 text-[11px] text-stone-400">
+                      Define persistent rules. These are injected into every chat as system context.
                     </p>
                     <Textarea
                       value={profile.custom_instructions}
                       onChange={(e) => setProfile({ ...profile, custom_instructions: e.target.value })}
-                      placeholder={"Example:\n- Always respond in Indonesian\n- Use emojis in responses\n- Be concise, no longer than 3 paragraphs\n- Always include code examples when explaining programming\n- Address me by my name"}
-                      className="min-h-[120px] text-sm"
-                      rows={6}
+                      placeholder={"Examples:\n\n• Always respond in Indonesian\n• Use bullet points for lists\n• Max 3 paragraphs per response\n• Include code examples when explaining programming\n• Be encouraging and supportive\n• When generating images, use a cinematic style"}
+                      className="min-h-[150px] text-sm leading-relaxed"
+                      rows={8}
                     />
                   </div>
 
-                  <div className="rounded-xl bg-stone-50 p-3 dark:bg-white/5">
-                    <p className="mb-1 text-[11px] font-medium text-stone-500">💡 Tips for effective instructions:</p>
-                    <ul className="space-y-1 text-[11px] text-stone-400">
-                      <li>• Be specific about tone and format</li>
-                      <li>• Set boundaries (e.g., max response length)</li>
-                      <li>• Define how to handle code, images, etc.</li>
-                      <li>• Add your preferred language and style</li>
+                  <div className="rounded-xl border border-stone-100 bg-stone-50 p-4 dark:border-white/5 dark:bg-white/[0.02]">
+                    <p className="mb-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">💡 Writing effective instructions:</p>
+                    <ul className="space-y-1.5 text-[11px] text-stone-400">
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Be specific about format and structure</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Set response boundaries (length, style)</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Define behavior for code, images, data</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Add your preferred language and tone</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Use bullet points for readability</li>
                     </ul>
                   </div>
 
-                  <Button onClick={() => void handleSaveInstructions()} disabled={isSaving} className="w-full">
-                    {isSaving ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
+                  <Button onClick={() => void handleSaveInstructions()} disabled={isSaving} className="w-full bg-violet-600 hover:bg-violet-700">
+                    {isSaving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                     Save Instructions
                   </Button>
                 </div>
