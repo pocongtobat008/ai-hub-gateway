@@ -8,10 +8,12 @@ import {
   Copy,
   Download,
   Edit3,
+  FileSpreadsheet,
   FileText,
   Image as ImageIcon,
   LoaderCircle,
   Paperclip,
+  Presentation,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -495,9 +497,9 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
           </span>
         )}
 
-        {/* Actions row: copy + download + timestamp */}
+        {/* Actions row: copy + download + export + timestamp */}
         {text && !isStreaming && (
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-1.5">
             <CopyButton
               id={responseId}
               text={text}
@@ -509,13 +511,55 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
               type="button"
               onClick={() => downloadUrl(`data:text/markdown,${encodeURIComponent(text)}`, `becomeai-response-${Date.now()}.md`)}
               className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
-              title="Download response as Markdown file"
+              title="Download as Markdown"
             >
               <Download className="size-3" />
-              File
+              .md
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const token = localStorage.getItem("auth_token");
+                fetch("/api/docs/generate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ title: "Response", content: text, format: "docx" }),
+                })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.ok && d.filename) downloadUrl(`/api/docs/download/${encodeURIComponent(d.filename)}`, d.filename);
+                  })
+                  .catch(() => {});
+              }}
+              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              title="Export as Word"
+            >
+              <FileText className="size-3" />
+              .docx
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const token = localStorage.getItem("auth_token");
+                fetch("/api/docs/generate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ title: "Response", content: text, format: "pptx" }),
+                })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.ok && d.filename) downloadUrl(`/api/docs/download/${encodeURIComponent(d.filename)}`, d.filename);
+                  })
+                  .catch(() => {});
+              }}
+              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              title="Export as PowerPoint"
+            >
+              <Presentation className="size-3" />
+              .pptx
             </button>
             {timeStr && (
-              <span className="text-[10px] text-stone-400 dark:text-stone-500 select-none">{timeStr}</span>
+              <span className="text-[10px] text-stone-400 dark:text-stone-500 select-none ml-1">{timeStr}</span>
             )}
           </div>
         )}

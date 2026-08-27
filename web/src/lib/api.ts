@@ -1772,3 +1772,16 @@ export async function deleteSkill(skillId: string) {
 export async function fetchSystemPrompt() {
   return httpRequest<{ system_prompt: string; parts: string[] }>("/api/profile/system-prompt");
 }
+
+// ── Document Generation ─────────────────────────────────────────────────────
+
+export async function generateDocument(data: { title: string; content: string; format: string }) {
+  return httpRequest<{ ok: boolean; filename?: string; format?: string; size_bytes?: number; error?: string }>(
+    "/api/docs/generate",
+    { method: "POST", body: JSON.stringify(data) },
+  );
+}
+
+export function getDocDownloadUrl(filename: string) {
+  return `/api/docs/download/${encodeURIComponent(filename)}`;
+}
