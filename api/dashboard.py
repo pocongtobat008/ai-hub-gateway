@@ -108,4 +108,65 @@ def create_router() -> APIRouter:
         days = max(1, min(int(days or 14), 90))
         return usage_service.summarize(days=days)
 
+    @router.get("/api/dashboard/recent")
+    def recent_activity(authorization: str | None = Header(default=None)):
+        """Return recently used models and provider accounts."""
+        identity = require_identity(authorization)
+        if identity is None:
+            return {"error": {"message": "Invalid or expired key", "type": "authentication_error", "code": "invalid_api_key"}}
+
+        import time as _time
+
+        usage = usage_service.summarize(days=30)
+        by_model = usage.get("by_model", [])
+        by_provider = usage.get("by_provider", [])
+
+        # Most recently used models (sorted by last_used)
+        recent_models = sorted(
+            [m for m in by_model if m.get("last_used", 0) > 0],
+            key=lambda x: x["last_used"],
+            reverse=True,
+        )[:10]
+
+        # Most recently used providers
+        recent_providers = sorted(
+            [p for p in by_provider if p.get("last_used", 0) > 0],
+            key=lambda x: x["last_used"],
+            reverse=True,
+        )[:10]
+
+        # Format timestamps
+        def fmt(ts):
+            if not ts:
+                return None
+            from datetime import datetime, timezone
+            return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+        recent_models_fmt = [
+            {
+                "model": m["model"],
+                "requests": m["requests"],
+                "errors": m["errors"],
+                "last_used": fmt(m["last_used"]),
+                "last_used_ts": m["last_used"],
+            }
+            for m in recent_models
+        ]
+
+        recent_providers_fmt = [
+            {
+                "provider": p["provider"],
+                "requests": p["requests"],
+                "errors": p["errors"],
+                "last_used": fmt(p["last_used"]),
+                "last_used_ts": p["last_used"],
+            }
+            for p in recent_providers
+        ]
+
+        return {
+            "recent_models": recent_models_fmt,
+            "recent_providers": recent_providers_fmt,
+        }
+
     return router

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -14,6 +14,21 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,22 +37,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import {
   fetchDashboardOverview,
+  fetchDashboardRecent,
   type DashboardOverview,
+  type DashboardRecent,
 } from "@/lib/api";
 
-const PROVIDER_META: Record<string, { label: string; color: string }> = {
-  gpt: { label: "GPT", color: "bg-emerald-500" },
-  gemini: { label: "Gemini", color: "bg-blue-500" },
-  deepseek: { label: "DeepSeek", color: "bg-indigo-500" },
-  grok: { label: "Grok", color: "bg-zinc-500" },
-  opencode: { label: "OpenCode", color: "bg-cyan-500" },
-  custom: { label: "Custom / Local", color: "bg-orange-500" },
-  bansos: { label: "Bansos", color: "bg-pink-500" },
-  manus: { label: "Manus", color: "bg-violet-500" },
+const PROVIDER_META: Record<string, { label: string; color: string; hex: string }> = {
+  gpt: { label: "GPT", color: "bg-emerald-500", hex: "#10b981" },
+  gemini: { label: "Gemini", color: "bg-blue-500", hex: "#3b82f6" },
+  deepseek: { label: "DeepSeek", color: "bg-indigo-500", hex: "#6366f1" },
+  grok: { label: "Grok", color: "bg-zinc-500", hex: "#71717a" },
+  opencode: { label: "OpenCode", color: "bg-cyan-500", hex: "#06b6d4" },
+  custom: { label: "Custom / Local", color: "bg-orange-500", hex: "#f97316" },
+  bansos: { label: "Bansos", color: "bg-pink-500", hex: "#ec4899" },
+  manus: { label: "Manus", color: "bg-violet-500", hex: "#8b5cf6" },
 };
 
+const MODEL_COLORS = [
+  "#10b981", "#3b82f6", "#6366f1", "#f97316", "#ec4899",
+  "#06b6d4", "#eab308", "#8b5cf6", "#ef4444", "#14b8a6",
+];
+
 function providerMeta(provider: string) {
-  return PROVIDER_META[provider] ?? { label: provider, color: "bg-slate-500" };
+  return PROVIDER_META[provider] ?? { label: provider, color: "bg-slate-500", hex: "#64748b" };
 }
 
 function StatCard({
@@ -77,56 +99,193 @@ function StatCard({
   );
 }
 
-function DailyChart({ daily }: { daily: DashboardOverview["usage"]["daily"] }) {
-  const max = Math.max(1, ...daily.map((d) => d.requests));
+/* ── Daily Area Chart ────────────────────────────────────────── */
+function DailyAreaChart({ daily }: { daily: DashboardOverview["usage"]["daily"] }) {
   if (daily.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">Belum ada data penggunaan.</p>
-    );
+    return <p className="py-8 text-center text-sm text-muted-foreground">Belum ada data penggunaan.</p>;
   }
+  const data = daily.map((d) => ({
+    date: d.date?.slice(5) ?? "",
+    requests: d.requests,
+    errors: d.errors,
+  }));
   return (
-    <div className="flex h-40 items-end gap-1.5 overflow-x-auto pb-1 sm:h-48 sm:gap-2">
-      {daily.map((day) => {
-        const heightPct = Math.max(4, (day.requests / max) * 100);
-        const errorPct = day.requests > 0 ? (day.errors / max) * 100 : 0;
-        return (
-          <div key={day.date} className="flex min-w-[24px] flex-1 flex-col items-center gap-1">
-            <span className="text-[10px] font-medium text-muted-foreground">{day.requests}</span>
-            <div
-              className="relative w-full max-w-[36px] flex-1 overflow-hidden rounded-md bg-muted"
-              title={`${day.date}: ${day.requests} requests, ${day.errors} errors`}
-            >
-              <div
-                className="absolute bottom-0 w-full rounded-md bg-primary/80 transition-all"
-                style={{ height: `${heightPct}%` }}
-              />
-              {errorPct > 0 ? (
-                <div
-                  className="absolute bottom-0 w-full bg-red-500/70"
-                  style={{ height: `${Math.min(errorPct, heightPct)}%` }}
-                />
-              ) : null}
-            </div>
-            <span className="whitespace-nowrap text-[9px] text-muted-foreground">
-              {day.date?.slice(5)}
-            </span>
-          </div>
-        );
-      })}
+    <div className="h-56 sm:h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradRequests" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="gradErrors" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis dataKey="date" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+          <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 12,
+              border: "1px solid hsl(var(--border))",
+              background: "hsl(var(--card))",
+              fontSize: 12,
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="requests"
+            stroke="hsl(var(--primary))"
+            fill="url(#gradRequests)"
+            strokeWidth={2}
+            name="Requests"
+          />
+          <Area
+            type="monotone"
+            dataKey="errors"
+            stroke="#ef4444"
+            fill="url(#gradErrors)"
+            strokeWidth={2}
+            name="Errors"
+          />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
+/* ── Provider Pie Chart ──────────────────────────────────────── */
+function ProviderPieChart({
+  providers,
+}: {
+  providers: DashboardOverview["usage"]["by_provider"];
+}) {
+  if (providers.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">Belum ada data.</p>;
+  }
+  const data = providers.map((p) => ({
+    name: providerMeta(p.provider ?? "").label,
+    value: p.requests,
+    errors: p.errors,
+    fill: providerMeta(p.provider ?? "").hex,
+  }));
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="h-52 w-full sm:h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={45}
+              outerRadius={80}
+              paddingAngle={3}
+              dataKey="value"
+              nameKey="name"
+              label={({ name, percent }) =>
+                `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+              }
+              labelLine={{ strokeWidth: 1 }}
+              style={{ fontSize: 10 }}
+            >
+              {data.map((entry, idx) => (
+                <Cell key={idx} fill={entry.fill} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                borderRadius: 12,
+                border: "1px solid hsl(var(--border))",
+                background: "hsl(var(--card))",
+                fontSize: 12,
+              }}
+              formatter={(value, name) => [`${value} requests`, String(name)]}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      {/* Legend list */}
+      <div className="flex flex-wrap justify-center gap-2">
+        {data.map((d) => (
+          <span key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="size-2.5 rounded-full" style={{ background: d.fill }} />
+            {d.name}
+            <span className="font-medium text-foreground">{d.value}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Model Horizontal Bar Chart ──────────────────────────────── */
+function ModelBarChart({
+  models,
+}: {
+  models: DashboardOverview["usage"]["by_model"];
+}) {
+  if (models.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">Belum ada data.</p>;
+  }
+  const data = models.slice(0, 10).map((m) => ({
+    name: m.model,
+    requests: m.requests,
+    errors: m.errors,
+  }));
+  return (
+    <div className="h-72 sm:h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+          <YAxis
+            dataKey="name"
+            type="category"
+            width={130}
+            tick={{ fontSize: 10 }}
+            className="text-muted-foreground"
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 12,
+              border: "1px solid hsl(var(--border))",
+              background: "hsl(var(--card))",
+              fontSize: 12,
+            }}
+          />
+          <Bar dataKey="requests" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Requests" />
+          <Bar dataKey="errors" fill="#ef4444" radius={[0, 4, 4, 0]} name="Errors" />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/* ── Main Dashboard ──────────────────────────────────────────── */
 export default function DashboardPage() {
   const { isCheckingAuth, session } = useAuthGuard();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [recent, setRecent] = useState<DashboardRecent | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [countdown, setCountdown] = useState(30);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchDashboardOverview();
+      const [data, recentData] = await Promise.all([
+        fetchDashboardOverview(),
+        fetchDashboardRecent().catch(() => null),
+      ]);
       setOverview(data);
+      if (recentData) setRecent(recentData);
     } catch {
       toast.error("Gagal memuat dashboard");
     } finally {
@@ -134,9 +293,40 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Auto-refresh logic
   useEffect(() => {
     if (session) void load();
   }, [session, load]);
+
+  useEffect(() => {
+    if (!autoRefresh || !session) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      return;
+    }
+
+    setCountdown(30);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Time to refresh
+          return 30;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    intervalRef.current = setInterval(() => {
+      void load();
+      setCountdown(30);
+    }, 30000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [autoRefresh, session, load]);
 
   if (isCheckingAuth) {
     return (
@@ -163,10 +353,25 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="shrink-0">
-          {loading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-          <span className="hidden sm:inline">Refresh</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Auto-refresh toggle */}
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              autoRefresh
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "border-muted text-muted-foreground"
+            }`}
+            title={autoRefresh ? `Auto-refresh aktif (${countdown}s)` : "Auto-refresh mati"}
+          >
+            <span className={`size-1.5 rounded-full ${autoRefresh ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+            <span className="hidden sm:inline">{autoRefresh ? `${countdown}s` : "Auto"}</span>
+          </button>
+          <Button variant="outline" size="sm" onClick={() => { void load(); setCountdown(30); }} disabled={loading} className="shrink-0">
+            {loading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -189,7 +394,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Usage chart */}
+      {/* Usage Area Chart */}
       <Card>
         <CardContent className="p-4 sm:p-5">
           <div className="mb-3 flex items-center gap-2">
@@ -197,11 +402,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold sm:text-base">Riwayat Penggunaan Harian</h2>
             <Badge variant="outline" className="ml-auto text-[10px]">14 hari terakhir</Badge>
           </div>
-          <DailyChart daily={usage?.daily ?? []} />
-          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary/80" /> Requests</span>
-            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-red-500/70" /> Errors</span>
-          </div>
+          <DailyAreaChart daily={usage?.daily ?? []} />
         </CardContent>
       </Card>
 
@@ -242,66 +443,27 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Charts: Pie + Bar side by side */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Top models */}
+        {/* Provider Pie Chart */}
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <Bot className="size-4 text-primary" />
+              <h2 className="text-sm font-semibold sm:text-base">Distribusi Provider</h2>
+            </div>
+            <ProviderPieChart providers={usage?.by_provider ?? []} />
+          </CardContent>
+        </Card>
+
+        {/* Model Bar Chart */}
         <Card>
           <CardContent className="p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
               <Cpu className="size-4 text-primary" />
               <h2 className="text-sm font-semibold sm:text-base">Model Paling Digunakan</h2>
             </div>
-            {(usage?.by_model ?? []).length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Belum ada data.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {(usage?.by_model ?? []).slice(0, 10).map((m) => {
-                  const topMax = usage?.by_model?.[0]?.requests || 1;
-                  return (
-                    <div key={m.model} className="flex items-center gap-2.5">
-                      <code className="w-32 shrink-0 truncate rounded bg-muted px-1.5 py-0.5 text-xs sm:w-44">{m.model}</code>
-                      <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.max(4, (m.requests / topMax) * 100)}%` }} />
-                      </div>
-                      <span className="w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                        {m.requests}×{m.errors > 0 ? ` ⚠${m.errors}` : ""}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Usage per provider */}
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <Bot className="size-4 text-primary" />
-              <h2 className="text-sm font-semibold sm:text-base">Penggunaan per Provider</h2>
-            </div>
-            {(usage?.by_provider ?? []).length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Belum ada data.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {(usage?.by_provider ?? []).map((p) => {
-                  const meta = providerMeta(p.provider ?? "");
-                  const topMax = usage?.by_provider?.[0]?.requests || 1;
-                  return (
-                    <div key={p.provider} className="flex items-center gap-2.5">
-                      <span className={`size-2 shrink-0 rounded-full ${meta.color}`} />
-                      <span className="w-20 shrink-0 truncate text-xs font-medium sm:w-24">{meta.label}</span>
-                      <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                        <div className={`h-full rounded-full ${meta.color}/70`} style={{ width: `${Math.max(4, (p.requests / topMax) * 100)}%` }} />
-                      </div>
-                      <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                        {p.requests}×{p.errors > 0 ? ` ⚠${p.errors}` : ""}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <ModelBarChart models={usage?.by_model ?? []} />
           </CardContent>
         </Card>
       </div>
@@ -324,6 +486,65 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent Activity */}
+      {recent && (recent.recent_models.length > 0 || recent.recent_providers.length > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Cpu className="size-4 text-emerald-500" />
+                <h2 className="text-sm font-semibold sm:text-base">Model Terbaru Digunakan</h2>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {recent.recent_models.map((m, i) => (
+                  <div key={m.model} className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-stone-800 dark:text-stone-200 truncate">{m.model}</div>
+                      <div className="text-[10px] text-stone-400">{m.requests} requests{m.errors > 0 ? ` · ${m.errors} errors` : ""}</div>
+                    </div>
+                    {m.last_used && (
+                      <span className="shrink-0 text-[10px] text-stone-400">{m.last_used}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Boxes className="size-4 text-blue-500" />
+                <h2 className="text-sm font-semibold sm:text-base">Provider Terbaru Digunakan</h2>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {recent.recent_providers.map((p, i) => {
+                  const meta = providerMeta(p.provider);
+                  return (
+                    <div key={p.provider} className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-stone-100 text-[10px] font-bold text-stone-700 dark:bg-white/10 dark:text-stone-300">
+                        {i + 1}
+                      </span>
+                      <div className={`size-2.5 shrink-0 rounded-full ${meta.color}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-stone-800 dark:text-stone-200">{meta.label}</div>
+                        <div className="text-[10px] text-stone-400">{p.requests} requests{p.errors > 0 ? ` · ${p.errors} errors` : ""}</div>
+                      </div>
+                      {p.last_used && (
+                        <span className="shrink-0 text-[10px] text-stone-400">{p.last_used}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Recent errors */}
       {(usage?.recent_errors ?? []).length > 0 ? (

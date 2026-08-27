@@ -1651,6 +1651,15 @@ export async function fetchDashboardUsage(days = 14) {
   return httpRequest<DashboardOverview["usage"]>(`/api/dashboard/usage?days=${days}`);
 }
 
+export type DashboardRecent = {
+  recent_models: Array<{ model: string; requests: number; errors: number; last_used: string | null; last_used_ts: number }>;
+  recent_providers: Array<{ provider: string; requests: number; errors: number; last_used: string | null; last_used_ts: number }>;
+};
+
+export async function fetchDashboardRecent() {
+  return httpRequest<DashboardRecent>("/api/dashboard/recent");
+}
+
 // ── Session Memory ──────────────────────────────────────────────────────────
 
 export type SessionMemoryContext = {
