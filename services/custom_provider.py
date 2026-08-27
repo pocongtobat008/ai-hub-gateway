@@ -64,7 +64,8 @@ def get_all_custom_models() -> list[dict[str, Any]]:
 def validate_models(base_url: str, api_key: str) -> list[str]:
     """Fetch available models from an OpenAI-compatible endpoint."""
     try:
-        url = f"{base_url.rstrip('/')}/v1/models"
+        base = base_url.rstrip('/')
+        url = f"{base}/models" if base.endswith('/v1') else f"{base}/v1/models"
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -153,7 +154,8 @@ class CustomProvider:
     ) -> dict[str, Any]:
         """Non-streaming completion."""
         mark_used(account_id)
-        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        base = base_url.rstrip('/')
+        url = f"{base}/chat/completions" if base.endswith('/v1') else f"{base}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -181,7 +183,8 @@ class CustomProvider:
     ) -> Iterator[dict[str, Any]]:
         """Streaming completion via SSE."""
         mark_used(account_id)
-        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        base = base_url.rstrip('/')
+        url = f"{base}/chat/completions" if base.endswith('/v1') else f"{base}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
