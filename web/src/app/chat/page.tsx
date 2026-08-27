@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, fetchSessionContext, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
+import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, fetchSessionContext, fetchSystemPrompt, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
 import { triggerConfetti } from "@/components/confetti";
 import webConfig from "@/constants/common-env";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -126,6 +126,16 @@ async function loadSessionContext(): Promise<string> {
   try {
     const data = await fetchSessionContext(5);
     return data?.context || "";
+  } catch {
+    return "";
+  }
+}
+
+// ── Profile system prompt injection ─────────────────────────────────────────
+async function loadProfilePrompt(): Promise<string> {
+  try {
+    const data = await fetchSystemPrompt();
+    return data?.system_prompt || "";
   } catch {
     return "";
   }
@@ -850,11 +860,16 @@ function ChatPageContent() {
       toast.info("🖼️ Detected image request — switching to Image Gen");
     }
 
-    // ── Load session context for new conversations
+    // ── Load session context + profile prompt
     let contextPrefix = "";
-    if (!selectedConversation) {
-      contextPrefix = await loadSessionContext();
-    }
+    const [sessionCtx, profilePrompt] = await Promise.all([
+      selectedConversation ? Promise.resolve("") : loadSessionContext(),
+      loadProfilePrompt(),
+    ]);
+    const parts: string[] = [];
+    if (profilePrompt) parts.push(profilePrompt);
+    if (sessionCtx) parts.push(sessionCtx);
+    contextPrefix = parts.join("\n\n");
 
     // Build file-content blocks so every provider can read the attachments
     const fileTextParts: Array<{ type: "text"; text: string }> = attachedFiles.map((file) => ({

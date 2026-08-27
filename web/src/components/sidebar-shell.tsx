@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { LoaderCircle, PanelLeft } from "lucide-react";
+import { LoaderCircle, PanelLeft, User } from "lucide-react";
+import { ProfilePopup } from "@/components/profile-popup";
 import { usePathname } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -56,6 +57,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [, forceUpdate] = useState(0);
   const callbacksRef = useRef<SidebarCallbacks>({
     conversations: [],
@@ -196,15 +198,26 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
 
         {/* Global mobile hamburger button — visible on ALL pages */}
         {!mobileOpen && (
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="fixed top-3 left-3 z-50 lg:hidden inline-flex size-10 items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-stone-200/60 text-stone-600 transition-all duration-200 active:scale-95 dark:bg-stone-900/90 dark:border-white/10 dark:text-stone-300"
-            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-            title="Open menu"
-          >
-            <PanelLeft className="size-4" />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="fixed top-3 left-3 z-50 lg:hidden inline-flex size-10 items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-stone-200/60 text-stone-600 transition-all duration-200 active:scale-95 dark:bg-stone-900/90 dark:border-white/10 dark:text-stone-300"
+              style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+              title="Open menu"
+            >
+              <PanelLeft className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="fixed top-3 right-3 z-50 lg:hidden inline-flex size-10 items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-stone-200/60 text-stone-600 transition-all duration-200 active:scale-95 dark:bg-stone-900/90 dark:border-white/10 dark:text-stone-300"
+              style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+              title="Profile"
+            >
+              <User className="size-4" />
+            </button>
+          </>
         )}
 
         <main
@@ -219,6 +232,7 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+      <ProfilePopup open={profileOpen} onClose={() => setProfileOpen(false)} />
     </SidebarCallbacksContext.Provider>
   );
 }

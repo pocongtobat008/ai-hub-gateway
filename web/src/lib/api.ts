@@ -1697,3 +1697,78 @@ export async function restoreLocalBackup(filename: string) {
     { method: "POST" },
   );
 }
+
+// ── Profile & Personalization ────────────────────────────────────────────────
+
+export type Skill = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  enabled: boolean;
+  system_prompt: string;
+};
+
+export type Personality = {
+  tone: string;
+  language: string;
+  verbosity: string;
+  expertise_level: string;
+};
+
+export type Profile = {
+  display_name: string;
+  avatar_emoji: string;
+  personality: Personality;
+  custom_instructions: string;
+  skills: Skill[];
+};
+
+export async function fetchProfile() {
+  return httpRequest<Profile>("/api/profile");
+}
+
+export async function updateProfile(data: { display_name?: string; avatar_emoji?: string }) {
+  return httpRequest<{ ok: boolean }>("/api/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePersonality(data: Personality) {
+  return httpRequest<{ ok: boolean }>("/api/profile/personality", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateInstructions(data: { custom_instructions: string }) {
+  return httpRequest<{ ok: boolean }>("/api/profile/instructions", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function toggleSkill(skillId: string, enabled: boolean) {
+  return httpRequest<{ ok: boolean }>(`/api/profile/skills/${skillId}/toggle`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function addSkill(skill: Omit<Skill, "enabled">) {
+  return httpRequest<{ ok: boolean; skill?: Skill }>("/api/profile/skills", {
+    method: "POST",
+    body: JSON.stringify(skill),
+  });
+}
+
+export async function deleteSkill(skillId: string) {
+  return httpRequest<{ ok: boolean }>(`/api/profile/skills/${skillId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchSystemPrompt() {
+  return httpRequest<{ system_prompt: string; parts: string[] }>("/api/profile/system-prompt");
+}

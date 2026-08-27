@@ -1,0 +1,301 @@
+"""Profile & Personalization API — skills, plugins, custom instructions, personality."""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Header
+from pydantic import BaseModel
+
+_DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))
+_PROFILE_FILE = _DATA_DIR / "profile.json"
+
+# ── Default profile ──────────────────────────────────────────────────────────
+
+DEFAULT_PROFILE: dict[str, Any] = {
+    "display_name": "User",
+    "avatar_emoji": "👤",
+    "personality": {
+        "tone": "friendly",
+        "language": "auto",
+        "verbosity": "balanced",
+        "expertise_level": "intermediate",
+    },
+    "custom_instructions": "",
+    "skills": [
+        {
+            "id": "code-helper",
+            "name": "Code Helper",
+            "description": "Write, debug, and explain code in any language",
+            "icon": "💻",
+            "enabled": True,
+            "system_prompt": "You are an expert programmer. Write clean, efficient code with explanations.",
+        },
+        {
+            "id": "creative-writer",
+            "name": "Creative Writer",
+            "description": "Write stories, articles, and creative content",
+            "icon": "✍️",
+            "enabled": False,
+            "system_prompt": "You are a creative writer. Write engaging, vivid content with good storytelling.",
+        },
+        {
+            "id": "data-analyst",
+            "name": "Data Analyst",
+            "description": "Analyze data, create charts, and find insights",
+            "icon": "📊",
+            "enabled": False,
+            "system_prompt": "You are a data analyst. Analyze data carefully, provide insights, and suggest visualizations.",
+        },
+        {
+            "id": "translator",
+            "name": "Translator",
+            "description": "Translate between languages with context awareness",
+            "icon": "🌐",
+            "enabled": False,
+            "system_prompt": "You are an expert translator. Translate naturally while preserving meaning and cultural context.",
+        },
+        {
+            "id": "tutor",
+            "name": "Tutor",
+            "description": "Explain concepts clearly and teach step by step",
+            "icon": "🎓",
+            "enabled": False,
+            "system_prompt": "You are a patient tutor. Explain concepts clearly with examples and step-by-step guidance.",
+        },
+        {
+            "id": "image-expert",
+            "name": "Image Expert",
+            "description": "Generate and edit images with detailed prompts",
+            "icon": "🎨",
+            "enabled": False,
+            "system_prompt": "You are an image prompt expert. Create detailed, vivid prompts for image generation.",
+        },
+        {
+            "id": "researcher",
+            "name": "Researcher",
+            "description": "Deep research with analysis and citations",
+            "icon": "🔍",
+            "enabled": False,
+            "system_prompt": "You are a thorough researcher. Provide comprehensive analysis with sources and evidence.",
+        },
+        {
+            "id": "business-advisor",
+            "name": "Business Advisor",
+            "description": "Business strategy, marketing, and financial advice",
+            "icon": "💼",
+            "enabled": False,
+            "system_prompt": "You are a business advisor. Provide strategic, actionable business advice.",
+        },
+    ],
+}
+
+
+def _load() -> dict[str, Any]:
+    if not _PROFILE_FILE.exists():
+        return DEFAULT_PROFILE.copy()
+    try:
+        with open(_PROFILE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # Merge with defaults for missing keys
+        merged = DEFAULT_PROFILE.copy()
+        merged.update(data)
+        if "skills" not in data:
+            merged["skills"] = DEFAULT_PROFILE["skills"]
+        else:
+            # Merge skills: keep user's skills + add any new defaults
+            existing_ids = {s["id"] for s in data["skills"]}
+            for ds in DEFAULT_PROFILE["skills"]:
+                if ds["id"] not in existing_ids:
+                    data["skills"].append(ds)
+            merged["skills"] = data["skills"]
+        return merged
+    except (json.JSONDecodeError, OSError):
+        return DEFAULT_PROFILE.copy()
+
+
+def _save(data: dict[str, Any]) -> None:
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(_PROFILE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def get_system_prompt_parts() -> list[str]:
+    """Get active system prompt parts from enabled skills and custom instructions.
+    Called by chat completion to inject personality into the AI."""
+    profile = _load()
+    parts = []
+
+    # Custom instructions
+    custom = profile.get("custom_instructions", "").strip()
+    if custom:
+        parts.append(f"## User Instructions\n{custom}")
+
+    # Personality
+    personality = profile.get("personality", {})
+    tone = personality.get("tone", "friendly")
+    lang = personality.get("language", "auto")
+    verbosity = personality.get("verbosity", "balanced")
+    expertise = personality.get("expertise_level", "intermediate")
+
+    personality_text = f"Adapt your tone to be {tone}"
+    if lang != "auto":
+        personality_text += f". Respond in {lang}"
+    personality_text += f". Keep responses {verbosity}"
+    if expertise:
+        personality_text += f". The user is at {expertise} level"
+    parts.append(f"## Personality\n{personality_text}")
+
+    # Enabled skills
+    enabled_skills = [s for s in profile.get("skills", []) if s.get("enabled")]
+    for skill in enabled_skills:
+        sp = skill.get("system_prompt", "")
+        if sp:
+            parts.append(sp)
+
+    return parts
+
+
+# ── API Routes ───────────────────────────────────────────────────────────────
+
+class UpdateProfileRequest(BaseModel):
+    display_name: str | None = None
+    avatar_emoji: str | None = None
+
+
+class UpdatePersonalityRequest(BaseModel):
+    tone: str | None = None
+    language: str | None = None
+    verbosity: str | None = None
+    expertise_level: str | None = None
+
+
+class UpdateInstructionsRequest(BaseModel):
+    custom_instructions: str
+
+
+class ToggleSkillRequest(BaseModel):
+    enabled: bool
+
+
+class AddSkillRequest(BaseModel):
+    id: str
+    name: str
+    description: str = ""
+    icon: str = "🧩"
+    system_prompt: str = ""
+
+
+def create_router() -> APIRouter:
+    router = APIRouter(prefix="/api/profile", tags=["profile"])
+
+    @router.get("")
+    def get_profile(authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        return _load()
+
+    @router.put("")
+    def update_profile(body: UpdateProfileRequest, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        if body.display_name is not None:
+            profile["display_name"] = body.display_name
+        if body.avatar_emoji is not None:
+            profile["avatar_emoji"] = body.avatar_emoji
+        _save(profile)
+        return {"ok": True, "profile": profile}
+
+    @router.put("/personality")
+    def update_personality(body: UpdatePersonalityRequest, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        personality = profile.get("personality", {})
+        if body.tone is not None:
+            personality["tone"] = body.tone
+        if body.language is not None:
+            personality["language"] = body.language
+        if body.verbosity is not None:
+            personality["verbosity"] = body.verbosity
+        if body.expertise_level is not None:
+            personality["expertise_level"] = body.expertise_level
+        profile["personality"] = personality
+        _save(profile)
+        return {"ok": True, "personality": personality}
+
+    @router.put("/instructions")
+    def update_instructions(body: UpdateInstructionsRequest, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        profile["custom_instructions"] = body.custom_instructions
+        _save(profile)
+        return {"ok": True}
+
+    @router.get("/system-prompt")
+    def get_system_prompt(authorization: str | None = Header(default=None)):
+        """Get the combined system prompt from all active skills + custom instructions."""
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"system_prompt": ""}
+        parts = get_system_prompt_parts()
+        return {"system_prompt": "\n\n".join(parts), "parts": parts}
+
+    @router.put("/skills/{skill_id}/toggle")
+    def toggle_skill(skill_id: str, body: ToggleSkillRequest, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        for skill in profile.get("skills", []):
+            if skill["id"] == skill_id:
+                skill["enabled"] = body.enabled
+                _save(profile)
+                return {"ok": True, "skill": skill}
+        return {"error": "Skill not found"}
+
+    @router.post("/skills")
+    def add_skill(body: AddSkillRequest, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        skills = profile.get("skills", [])
+        # Check duplicate
+        if any(s["id"] == body.id for s in skills):
+            return {"error": "Skill already exists"}
+        new_skill = {
+            "id": body.id,
+            "name": body.name,
+            "description": body.description,
+            "icon": body.icon,
+            "enabled": True,
+            "system_prompt": body.system_prompt,
+        }
+        skills.append(new_skill)
+        profile["skills"] = skills
+        _save(profile)
+        return {"ok": True, "skill": new_skill}
+
+    @router.delete("/skills/{skill_id}")
+    def delete_skill(skill_id: str, authorization: str | None = Header(default=None)):
+        from api.support import require_identity
+        if require_identity(authorization) is None:
+            return {"error": "Unauthorized"}
+        profile = _load()
+        skills = profile.get("skills", [])
+        profile["skills"] = [s for s in skills if s["id"] != skill_id]
+        _save(profile)
+        return {"ok": True}
+
+    return router
