@@ -18,6 +18,7 @@ import {
   Palette,
   PenTool,
   Plus,
+  Shield,
   Search,
   Sparkles,
   User,
@@ -62,6 +63,7 @@ const SKILL_ICONS: Record<string, React.ElementType> = {
   language: Languages,
   message: MessageSquare,
   sparkles: Sparkles,
+  shield: Shield,
 };
 
 function SkillIcon({ icon, className }: { icon: string; className?: string }) {
