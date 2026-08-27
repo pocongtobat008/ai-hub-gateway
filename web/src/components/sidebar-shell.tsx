@@ -119,9 +119,11 @@ export function SidebarShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (window as any).__sidebarOpenMobile = () => setMobileOpen(true);
     (window as any).__sidebarCloseMobile = () => setMobileOpen(false);
+    (window as any).__openProfile = () => setProfileOpen(true);
     return () => {
       delete (window as any).__sidebarOpenMobile;
       delete (window as any).__sidebarCloseMobile;
+      delete (window as any).__openProfile;
     };
   }, []);
 

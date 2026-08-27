@@ -28,6 +28,7 @@ import {
   Search,
   Shield,
   Sparkles,
+  User,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -715,6 +716,15 @@ export function AppSidebar({
 
           <div className={cn("flex items-center gap-1", collapsed && "flex-col")}>
             <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => (window as any).__openProfile?.()}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="Profile & Skills"
+              title="Profile & Skills"
+            >
+              <User className="size-4" />
+            </button>
             <button
               type="button"
               onClick={() => void handleLogout()}
