@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Clipboard, Globe, Key, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Server, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,14 +53,12 @@ function groupByProvider(accounts: CustomAccount[]): ProviderGroup[] {
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(acc);
   }
-
   return Array.from(map.entries())
     .map(([base_url, accs]) => {
       const allModels = [...new Set(accs.flatMap((a) => a.models || []))];
       const normalCount = accs.filter((a) => a.status === "normal").length;
-      const abnormalCount = accs.length - normalCount;
       const label = accs[0]?.label?.replace(/ #\d+$/, "") || base_url.split("/").pop() || "Custom";
-      return { base_url, accounts: accs, label, totalModels: allModels, normalCount, abnormalCount };
+      return { base_url, accounts: accs, label, totalModels: allModels, normalCount, abnormalCount: accs.length - normalCount };
     })
     .sort((a, b) => b.accounts.length - a.accounts.length);
 }
@@ -71,7 +69,7 @@ function ProviderCard({
   group,
   onTest,
   onRefresh,
-  onEdit,
+  onEditProvider,
   onDelete,
   testingId,
   refreshingId,
@@ -79,7 +77,7 @@ function ProviderCard({
   group: ProviderGroup;
   onTest: (acc: CustomAccount) => void;
   onRefresh: (acc: CustomAccount) => void;
-  onEdit: (acc: CustomAccount) => void;
+  onEditProvider: (group: ProviderGroup) => void;
   onDelete: (acc: CustomAccount) => void;
   testingId: string | null;
   refreshingId: string | null;
@@ -90,7 +88,7 @@ function ProviderCard({
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardContent className="p-4">
-        {/* Header — always visible */}
+        {/* Header */}
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 text-white shadow-md dark:from-stone-300 dark:to-stone-500 dark:text-stone-950">
             <Server className="size-5" />
@@ -107,26 +105,20 @@ function ProviderCard({
               {group.totalModels.slice(0, 6).map((m) => (
                 <span key={m} className="inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 dark:bg-white/10 dark:text-stone-400">{m}</span>
               ))}
-              {group.totalModels.length > 6 && (
-                <span className="text-[10px] text-stone-400">+{group.totalModels.length - 6} more</span>
-              )}
+              {group.totalModels.length > 6 && <span className="text-[10px] text-stone-400">+{group.totalModels.length - 6} more</span>}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => { for (const acc of group.accounts) onTest(acc); }}>
-              <PlugZap className="size-3" /> Test All
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="icon" className="size-7" onClick={() => onEditProvider(group)} title="Edit provider / add keys">
+              <Pencil className="size-3.5" />
             </Button>
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10"
-            >
+            <button type="button" onClick={() => setExpanded(!expanded)} className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10">
               {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
             </button>
           </div>
         </div>
 
-        {/* Expanded — individual keys */}
+        {/* Expanded keys */}
         {expanded && (
           <div className="mt-3 space-y-1.5 border-t border-stone-100 pt-3 dark:border-white/5">
             <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">API Keys ({group.accounts.length})</p>
@@ -149,7 +141,6 @@ function ProviderCard({
                     <Button variant="ghost" size="icon" className="size-6" onClick={() => onRefresh(acc)} disabled={refreshingId === acc.id}>
                       {refreshingId === acc.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="size-6" onClick={() => onEdit(acc)}><Pencil className="size-3" /></Button>
                     <Button variant="ghost" size="icon" className="size-6 text-rose-500 hover:text-rose-600" onClick={() => onDelete(acc)}><Trash2 className="size-3" /></Button>
                   </div>
                 </div>
@@ -167,9 +158,18 @@ function ProviderCard({
 function CustomAccountsContent() {
   const [accounts, setAccounts] = useState<CustomAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<CustomAccount | null>(null);
-  const [form, setForm] = useState({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "" });
+  const [dialogMode, setDialogMode] = useState<"add" | "edit-provider">("add");
+  const [editingGroup, setEditingGroup] = useState<ProviderGroup | null>(null);
+
+  const [form, setForm] = useState({
+    baseUrl: "", apiKey: "", label: "", modelsText: "",
+    bulkMode: false, bulkKeys: "",
+    addKeyMode: false, newSingleKey: "", newBulkMode: false, newBulkKeys: "",
+  });
+
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -181,35 +181,42 @@ function CustomAccountsContent() {
     try {
       const data = await fetchCustomAccounts();
       setAccounts(data.accounts || []);
-    } catch {
-      toast.error("Failed to load accounts");
-    } finally {
-      setIsLoading(false);
-    }
+    } catch { toast.error("Failed to load accounts"); }
+    finally { setIsLoading(false); }
   }, []);
 
   useEffect(() => { void loadAccounts(); }, [loadAccounts]);
 
   const groups = useMemo(() => groupByProvider(accounts), [accounts]);
 
+  // ── Open dialogs ───────────────────────────────────────────────────────
+
   const openAdd = () => {
-    setEditing(null);
-    setForm({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "" });
+    setDialogMode("add");
+    setEditingGroup(null);
+    setForm({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "", addKeyMode: false, newSingleKey: "", newBulkMode: false, newBulkKeys: "" });
     setDialogOpen(true);
   };
 
-  const openEdit = (account: CustomAccount) => {
-    setEditing(account);
+  const openEditProvider = (group: ProviderGroup) => {
+    setDialogMode("edit-provider");
+    setEditingGroup(group);
     setForm({
-      baseUrl: account.base_url,
+      baseUrl: group.base_url,
       apiKey: "",
-      label: account.label || "",
-      modelsText: (account.models || []).join("\n"),
+      label: group.label,
+      modelsText: group.totalModels.join("\n"),
       bulkMode: false,
       bulkKeys: "",
+      addKeyMode: false,
+      newSingleKey: "",
+      newBulkMode: false,
+      newBulkKeys: "",
     });
     setDialogOpen(true);
   };
+
+  // ── Fetch models ─────────────────────────────────────────────────────
 
   const handleFetchModels = async () => {
     if (!form.baseUrl.trim()) { toast.error("Enter a base URL first"); return; }
@@ -218,18 +225,14 @@ function CustomAccountsContent() {
       const data = await validateCustomModels({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim() });
       if (data.ok && data.models.length > 0) {
         const existing = form.modelsText.split("\n").map((m) => m.trim()).filter(Boolean);
-        const allModels = [...new Set([...existing, ...data.models])];
-        setForm({ ...form, modelsText: allModels.join("\n") });
+        setForm({ ...form, modelsText: [...new Set([...existing, ...data.models])].join("\n") });
         toast.success(`Found ${data.models.length} models`);
-      } else {
-        toast.error("No models found or endpoint unreachable");
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to fetch models");
-    } finally {
-      setIsFetching(false);
-    }
+      } else { toast.error("No models found"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setIsFetching(false); }
   };
+
+  // ── Save (add new provider or add keys to existing) ──────────────────
 
   const handleSave = async () => {
     if (!form.baseUrl.trim()) { toast.error("Base URL is required"); return; }
@@ -237,40 +240,56 @@ function CustomAccountsContent() {
     if (models.length === 0) { toast.error("Add at least one model"); return; }
     setIsSaving(true);
     try {
-      if (editing) {
-        await deleteCustomAccount(editing.id);
-        await createCustomAccount({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim(), models, label: form.label.trim() || "" });
-        toast.success("Account updated");
-      } else if (form.bulkMode && form.bulkKeys.trim()) {
-        const keys = form.bulkKeys.split("\n").map((k) => k.trim()).filter(Boolean);
-        if (keys.length === 0) { toast.error("No valid API keys"); return; }
-        const result = await addCustomBulkAccounts({ base_url: form.baseUrl.trim(), api_keys: keys, models, label: form.label.trim() || "" });
-        toast.success(`${result.added} account(s) added`);
+      if (dialogMode === "edit-provider" && editingGroup) {
+        // ── Edit provider: add new keys ──
+        const newKeys: string[] = [];
+        if (form.addKeyMode) {
+          if (form.newBulkMode && form.newBulkKeys.trim()) {
+            newKeys.push(...form.newBulkKeys.split("\n").map((k) => k.trim()).filter(Boolean));
+          } else if (form.newSingleKey.trim()) {
+            newKeys.push(form.newSingleKey.trim());
+          }
+        }
+        if (newKeys.length > 0) {
+          const result = await addCustomBulkAccounts({
+            base_url: form.baseUrl.trim(),
+            api_keys: newKeys,
+            models,
+            label: form.label.trim() || editingGroup.label,
+          });
+          toast.success(`Added ${result.added} new key(s)`);
+        } else {
+          toast.info("No new keys to add");
+        }
       } else {
-        await createCustomAccount({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim(), models, label: form.label.trim() || "" });
-        toast.success("Account added");
+        // ── Add new provider ──
+        if (form.bulkMode && form.bulkKeys.trim()) {
+          const keys = form.bulkKeys.split("\n").map((k) => k.trim()).filter(Boolean);
+          if (keys.length === 0) { toast.error("No valid API keys"); return; }
+          const result = await addCustomBulkAccounts({ base_url: form.baseUrl.trim(), api_keys: keys, models, label: form.label.trim() || "" });
+          toast.success(`${result.added} account(s) added`);
+        } else {
+          await createCustomAccount({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim(), models, label: form.label.trim() || "" });
+          toast.success("Account added");
+        }
       }
       setDialogOpen(false);
       await loadAccounts();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
+    finally { setIsSaving(false); }
   };
+
+  // ── Test / Refresh / Delete ──────────────────────────────────────────
 
   const handleTest = async (account: CustomAccount) => {
     setTestingId(account.id);
     try {
       const result = await testCustom({ account_id: account.id });
-      if (result.ok) toast.success(`${account.label || account.base_url}: OK`);
-      else toast.error(`${account.label || account.base_url}: ${result.error || "Failed"}`);
+      if (result.ok) toast.success(`${account.label || "Key"}: OK`);
+      else toast.error(`${account.label || "Key"}: ${result.error || "Failed"}`);
       await loadAccounts();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Test failed");
-    } finally {
-      setTestingId(null);
-    }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Test failed"); }
+    finally { setTestingId(null); }
   };
 
   const handleRefreshOne = async (account: CustomAccount) => {
@@ -279,11 +298,8 @@ function CustomAccountsContent() {
       await validateCustomModels({ base_url: account.base_url, api_key: "" });
       toast.success("Refreshed");
       await loadAccounts();
-    } catch {
-      toast.error("Refresh failed");
-    } finally {
-      setRefreshingId(null);
-    }
+    } catch { toast.error("Refresh failed"); }
+    finally { setRefreshingId(null); }
   };
 
   const handleTestAll = async () => {
@@ -292,11 +308,8 @@ function CustomAccountsContent() {
       const result = await testAllCustom();
       toast.success(`Tested: ${result.passed}/${result.total} passed`);
       await loadAccounts();
-    } catch {
-      toast.error("Test all failed");
-    } finally {
-      setTestingAll(false);
-    }
+    } catch { toast.error("Test all failed"); }
+    finally { setTestingAll(false); }
   };
 
   const handleDelete = async (account: CustomAccount) => {
@@ -305,9 +318,7 @@ function CustomAccountsContent() {
       toast.success("Deleted");
       setDeleteConfirm(null);
       await loadAccounts();
-    } catch {
-      toast.error("Delete failed");
-    }
+    } catch { toast.error("Delete failed"); }
   };
 
   const handleReset = async () => {
@@ -316,13 +327,7 @@ function CustomAccountsContent() {
       const result = await resetCustomAccounts();
       toast.success(`Reset ${result.reset} accounts`);
       await loadAccounts();
-    } catch {
-      toast.error("Reset failed");
-    }
-  };
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => toast.success("Copied")).catch(() => {});
+    } catch { toast.error("Reset failed"); }
   };
 
   if (isLoading) {
@@ -346,7 +351,7 @@ function CustomAccountsContent() {
         </div>
       </div>
 
-      {/* Provider Cards — grouped by base_url */}
+      {/* Provider Cards */}
       {groups.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
@@ -364,7 +369,7 @@ function CustomAccountsContent() {
               group={group}
               onTest={handleTest}
               onRefresh={handleRefreshOne}
-              onEdit={openEdit}
+              onEditProvider={openEditProvider}
               onDelete={(acc) => setDeleteConfirm(acc)}
               testingId={testingId}
               refreshingId={refreshingId}
@@ -373,53 +378,116 @@ function CustomAccountsContent() {
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* Add / Edit Provider Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Provider" : "Add Custom Provider"}</DialogTitle>
-            <DialogDescription>Connect any OpenAI-compatible API endpoint.</DialogDescription>
+            <DialogTitle>
+              {dialogMode === "edit-provider" ? `Edit ${editingGroup?.label || "Provider"}` : "Add Custom Provider"}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogMode === "edit-provider"
+                ? "Add new API keys or update models for this provider."
+                : "Connect any OpenAI-compatible API endpoint."}
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4 py-2">
+            {/* Base URL — readonly in edit mode */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Base URL *</label>
-              <Input value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://api.example.com/v1" className="font-mono text-xs" />
+              <Input
+                value={form.baseUrl}
+                onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+                placeholder="https://api.example.com/v1"
+                className="font-mono text-xs"
+                readOnly={dialogMode === "edit-provider"}
+              />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
-                {!editing && (
+
+            {/* ── Add mode: API Key input ── */}
+            {dialogMode === "add" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
                   <button type="button" onClick={() => setForm({ ...form, bulkMode: !form.bulkMode, apiKey: "", bulkKeys: "" })} className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
                     {form.bulkMode ? "Single key" : "Bulk add"}
                   </button>
+                </div>
+                {form.bulkMode ? (
+                  <div className="space-y-1.5">
+                    <textarea value={form.bulkKeys} onChange={(e) => setForm({ ...form, bulkKeys: e.target.value })} placeholder={"Paste API keys, one per line:\nsk-key1...\nsk-key2..."} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]" rows={4} />
+                    <p className="text-[11px] text-stone-400">{form.bulkKeys.split("\n").filter((k) => k.trim()).length} key(s)</p>
+                  </div>
+                ) : (
+                  <Input value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} placeholder="sk-... (leave empty if not needed)" className="font-mono text-xs" type="password" />
                 )}
               </div>
-              {form.bulkMode && !editing ? (
-                <div className="space-y-1.5">
-                  <textarea value={form.bulkKeys} onChange={(e) => setForm({ ...form, bulkKeys: e.target.value })} placeholder={"Paste API keys, one per line:\nsk-key1...\nsk-key2..."} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]" rows={4} />
-                  <p className="text-[11px] text-stone-400">{form.bulkKeys.split("\n").filter((k) => k.trim()).length} key(s) — each creates a separate account</p>
+            )}
+
+            {/* ── Edit mode: Add new keys ── */}
+            {dialogMode === "edit-provider" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                    {form.addKeyMode ? "New API Keys" : "Add API Keys"}
+                  </label>
+                  {!form.addKeyMode ? (
+                    <button type="button" onClick={() => setForm({ ...form, addKeyMode: true })} className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                      <Plus className="size-3" /> Add key
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setForm({ ...form, addKeyMode: false, newSingleKey: "", newBulkKeys: "" })} className="text-[11px] font-medium text-stone-400 hover:text-stone-600">
+                      Cancel
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <Input value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} placeholder="sk-... (leave empty if not needed)" className="font-mono text-xs" type="password" />
-              )}
-            </div>
+                {form.addKeyMode && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setForm({ ...form, newBulkMode: false })} className={`text-[11px] font-medium px-2 py-1 rounded ${!form.newBulkMode ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900" : "text-stone-500 hover:bg-stone-100"}`}>
+                        Single
+                      </button>
+                      <button type="button" onClick={() => setForm({ ...form, newBulkMode: true })} className={`text-[11px] font-medium px-2 py-1 rounded ${form.newBulkMode ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900" : "text-stone-500 hover:bg-stone-100"}`}>
+                        Bulk
+                      </button>
+                    </div>
+                    {form.newBulkMode ? (
+                      <div className="space-y-1.5">
+                        <textarea value={form.newBulkKeys} onChange={(e) => setForm({ ...form, newBulkKeys: e.target.value })} placeholder={"Paste new API keys, one per line:\nsk-key1...\nsk-key2..."} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]" rows={4} />
+                        <p className="text-[11px] text-stone-400">{form.newBulkKeys.split("\n").filter((k) => k.trim()).length} new key(s) to add</p>
+                      </div>
+                    ) : (
+                      <Input value={form.newSingleKey} onChange={(e) => setForm({ ...form, newSingleKey: e.target.value })} placeholder="Paste new API key" className="font-mono text-xs" type="password" />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Fetch Models */}
             <Button variant="outline" size="sm" onClick={() => void handleFetchModels()} disabled={isFetching || !form.baseUrl.trim()} className="gap-1.5">
               {isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <Zap className="size-4" />} Fetch Models
             </Button>
+
+            {/* Models */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Models <span className="text-stone-400 font-normal">(one per line)</span></label>
-              <textarea value={form.modelsText} onChange={(e) => setForm({ ...form, modelsText: e.target.value })} placeholder={"gpt-4o\nclaude-3-opus\nmistral-large"} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[100px]" rows={5} />
+              <textarea value={form.modelsText} onChange={(e) => setForm({ ...form, modelsText: e.target.value })} placeholder={"gpt-4o\nclaude-3-opus"} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[100px]" rows={5} />
             </div>
+
+            {/* Label */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Label</label>
               <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="My API Provider" />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={() => void handleSave()} disabled={isSaving || !form.baseUrl.trim()}>
               {isSaving ? <LoaderCircle className="mr-1.5 size-4 animate-spin" /> : null}
-              {editing ? "Save" : "Add"}
+              {dialogMode === "edit-provider" ? "Add Keys" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>
