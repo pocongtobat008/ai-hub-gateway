@@ -15,19 +15,315 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── Extract HTML/CSS/JS from AI response ───────────────────────────────────
+// ── Extract HTML/CSS/JS from AI response ───────────────────────────────────// Languages that can be wrapped in HTML for iframe preview
+const PREVIEWABLE_LANGS = new Set([
+  "html", "htm", "xml", "svg",
+  "css", "scss", "less", "sass",
+  "js", "javascript", "jsx", "tsx", "ts", "typescript",
+  "vue", "svelte",
+  "py", "python", "rb", "ruby",
+  "json", "yaml", "yml",
+  "markdown", "md",
+]);
 
-function extractCodeBlocks(text: string): { html: string; css: string; js: string; raw: string } {
+// Check if a language can be previewed in an iframe
+export function isPreviewableCode(lang: string): boolean {
+  return PREVIEWABLE_LANGS.has(lang.toLowerCase());
+}
+
+// Wrap non-HTML code in a previewable HTML shell
+function wrapCodeAsPreview(lang: string, code: string): string {
+  const l = lang.toLowerCase();
+
+  // JSX/TSX/React — render in browser with Babel standalone
+  if (["jsx", "tsx", "react"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline 'unsafe-eval'; script-src * inline 'unsafe-eval' 'unsafe-inline';">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fafafa; }
+    #root { width: 100%; }
+    .error { color: #dc2626; padding: 20px; font-family: monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    try {
+      const Root = (${code});
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(Root));
+    } catch(e) {
+      document.getElementById('root').innerHTML = '<div class="error">' + e.message + '</div>';
+    }
+  <\/script>
+</body>
+</html>`;
+  }
+
+  // Vue
+  if (l === "vue") {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline; script-src * inline 'unsafe-eval';">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    try {
+      ${code}
+    } catch(e) {
+      document.getElementById('app').innerHTML = '<div style="color:#dc2626;padding:20px;font-family:monospace;">' + e.message + '</div>';
+    }
+  <\/script>
+</body>
+</html>`;
+  }
+
+  // Svelte
+  if (l === "svelte") {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .svelte-note { padding: 20px; color: #666; background: #f5f5f5; border-radius: 8px; margin: 20px; }
+  </style>
+</head>
+<body>
+  <div class="svelte-note">
+    <h3>Svelte Component</h3>
+    <p>Svelte requires compilation. Below is the source code:</p>
+    <pre style="margin-top:12px;padding:12px;background:#1e1e1e;color:#d4d4d4;border-radius:8px;overflow:auto;font-size:13px;">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+  </div>
+</body>
+</html>`;
+  }
+
+  // Python — show code with syntax highlighting (no runtime)
+  if (["py", "python"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 16px; background: #1e1e1e; }
+    pre { border-radius: 12px; overflow: auto; }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-python">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+  <script>hljs.highlightAll();<\/script>
+</body>
+</html>`;
+  }
+
+  // Ruby
+  if (["rb", "ruby"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/ruby.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { padding: 16px; background: #1e1e1e; }
+    pre { border-radius: 12px; overflow: auto; }
+    code { font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-ruby">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+  <script>hljs.highlightAll();<\/script>
+</body>
+</html>`;
+  }
+
+  // JSON
+  if (l === "json") {
+    try {
+      const formatted = JSON.stringify(JSON.parse(code), null, 2);
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { padding: 16px; background: #1e1e1e; }
+    pre { border-radius: 12px; overflow: auto; }
+    code { font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-json">${formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+  <script>hljs.highlightAll();<\/script>
+</body>
+</html>`;
+    } catch {
+      // Not valid JSON, show raw
+    }
+  }
+
+  // YAML/YML
+  if (["yaml", "yml"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { padding: 16px; background: #1e1e1e; }
+    pre { border-radius: 12px; overflow: auto; }
+    code { font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <pre><code class="language-yaml">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+  <script>hljs.highlightAll();<\/script>
+</body>
+</html>`;
+  }
+
+  // Markdown
+  if (["markdown", "md"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; max-width: 800px; margin: 0 auto; line-height: 1.7; color: #1a1a1a; }
+    h1,h2,h3 { margin: 1em 0 0.5em; }
+    p { margin: 0.5em 0; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 12px; overflow: auto; }
+    pre code { background: none; color: inherit; }
+    blockquote { border-left: 4px solid #ddd; padding-left: 16px; color: #666; margin: 1em 0; }
+    table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+    th { background: #f5f5f5; }
+    img { max-width: 100%; border-radius: 8px; }
+    a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <script>
+    document.body.innerHTML = marked.parse(${JSON.stringify(code)});
+  <\/script>
+</body>
+</html>`;
+  }
+
+  // CSS/SCSS/LESS — wrap in HTML preview
+  if (["css", "scss", "less", "sass"].includes(l)) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline;">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    ${code}
+  </style>
+</head>
+<body>
+  <div style="padding:20px;">
+    <h2 style="margin-bottom:16px;color:#333;">CSS Preview</h2>
+    <div class="preview-grid" style="display:grid;gap:16px;">
+      <div><strong>Buttons</strong><br><button class="btn">Button</button> <button class="btn btn-primary">Primary</button></div>
+      <div><strong>Card</strong><br><div class="card"><h3>Card Title</h3><p>Card content goes here.</p></div></div>
+      <div><strong>Input</strong><br><input class="input" placeholder="Type here..." style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;width:200px;"></div>
+      <div><strong>Typography</strong><br><h1>H1 Heading</h1><h2>H2 Heading</h2><p>Paragraph text with <a href="#">link</a></p></div>
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  // For other JS/TS — wrap as a script in HTML
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline; script-src * inline 'unsafe-eval';">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 16px; background: #fafafa; }
+    .output { padding: 16px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; min-height: 100px; }
+    .error { color: #dc2626; padding: 12px; background: #fef2f2; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="output" class="output"></div>
+  <script>
+    const out = document.getElementById('output');
+    const _log = console.log;
+    const _err = console.error;
+    console.log = (...a) => { _log(...a); out.innerHTML += '<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">' + a.map(x => typeof x === 'object' ? JSON.stringify(x,null,2) : String(x)).join(' ') + '</div>'; };
+    console.error = (...a) => { _err(...a); out.innerHTML += '<div style="color:#dc2626;padding:4px 0;font-size:13px;">' + a.map(String).join(' ') + '</div>'; };
+    try {
+      ${code}
+    } catch(e) {
+      out.innerHTML += '<div class="error">' + e.message + '</div>';
+    }
+  <\/script>
+</body>
+</html>`;
+}
+
+function extractCodeBlocks(text: string): { html: string; css: string; js: string; raw: string; detectedLang: string } {
   const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
   let html = "";
   let css = "";
   let js = "";
   let raw = text;
+  let detectedLang = "";
 
   let match;
   while ((match = codeBlockRegex.exec(text)) !== null) {
     const lang = (match[1] || "").toLowerCase();
     const code = match[2].trim();
+    detectedLang = lang;
     if (lang === "html" || lang === "htm") {
       html += (html ? "\n" : "") + code;
     } else if (lang === "css" || lang === "scss" || lang === "less") {
@@ -39,24 +335,27 @@ function extractCodeBlocks(text: string): { html: string; css: string; js: strin
 
   // If no specific code blocks found, try to extract from the whole response
   if (!html && !css && !js) {
-    // Check if the whole text looks like HTML
     const trimmed = text.trim();
     if (
-      trimmed.startsWith("<!DOCTYPE") ||
-      trimmed.startsWith("<html") ||
-      trimmed.startsWith("<div") ||
-      trimmed.startsWith("<section") ||
+      trimmed.startsWith("<!DOCTYPE") || trimmed.startsWith("<html") ||
+      trimmed.startsWith("<div") || trimmed.startsWith("<section") ||
       trimmed.startsWith("<!")
     ) {
       html = trimmed;
     }
   }
 
-  return { html, css, js, raw };
+  return { html, css, js, raw, detectedLang };
 }
 
-function buildPreviewHtml(extracted: { html: string; css: string; js: string }): string {
-  const { html, css, js } = extracted;
+function buildPreviewHtml(extracted: { html: string; css: string; js: string; detectedLang?: string }): string {
+  const { html, css, js, detectedLang } = extracted;
+
+  // If we have a non-HTML language that needs wrapping
+  if (!html && !css && detectedLang && ["jsx", "tsx", "react", "vue", "svelte", "py", "python", "rb", "ruby", "json", "yaml", "yml", "markdown", "md"].includes(detectedLang)) {
+    const code = js || css || "";
+    if (code) return wrapCodeAsPreview(detectedLang, code);
+  }
 
   // If we have a full HTML document, use it as-is but inject CSS/JS
   if (html.includes("<!DOCTYPE") || html.includes("<html")) {
@@ -149,7 +448,7 @@ export function CanvasView({ responseText, isStreaming = false, title }: CanvasV
   // Build preview HTML
   const previewHtml = useMemo(() => {
     const source = hasEdits
-      ? { html: editedHtml, css: editedCss, js: editedJs }
+      ? { html: editedHtml, css: editedCss, js: editedJs, detectedLang: extracted.detectedLang }
       : extracted;
     return buildPreviewHtml(source);
   }, [hasEdits, editedHtml, editedCss, editedJs, extracted]);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Compass, Download, History, LoaderCircle, Paperclip, Plus, Share2, Shield, Trash2 } from "lucide-react";
+import { ArrowDown, Compass, Download, Eye, History, LoaderCircle, Paperclip, Plus, Share2, Shield, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChatComposer, type ComposerAccount, type ComposerFile, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
@@ -254,6 +254,19 @@ function ChatPageContent() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
+  const [previewCode, setPreviewCode] = useState<{ code: string; language: string } | null>(null);
+
+  // Listen for preview-code events from code blocks
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.code && detail?.language) {
+        setPreviewCode({ code: detail.code, language: detail.language });
+      }
+    };
+    window.addEventListener("becomeai:preview-code", handler);
+    return () => window.removeEventListener("becomeai:preview-code", handler);
+  }, []);
 
   // Register sidebar callbacks
   useEffect(() => {
@@ -1252,6 +1265,31 @@ function ChatPageContent() {
           </DialogContent>
         </Dialog>
       ) : null}
+
+      {/* Code Preview Modal */}
+      {previewCode && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPreviewCode(null)} />
+          <div className="relative z-10 flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl dark:border-white/10 dark:bg-stone-900">
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <Eye className="size-4 text-emerald-500" />
+                <span className="text-sm font-semibold text-stone-800 dark:text-stone-200">Preview</span>
+                <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-500 dark:bg-white/10 dark:text-stone-400">{previewCode.language}</span>
+              </div>
+              <button onClick={() => setPreviewCode(null)} className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <CanvasView
+                responseText={`\`\`\`${previewCode.language}\n${previewCode.code}\n\`\`\`}`}
+                title="Code Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

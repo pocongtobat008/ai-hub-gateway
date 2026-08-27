@@ -14,9 +14,11 @@ import {
   LoaderCircle,
   Paperclip,
   Presentation,
+  Eye,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { isPreviewableCode } from "@/app/chat/components/canvas-view";
 import hljs from "highlight.js/lib/core";
 
 // Register commonly used languages (lightweight bundle)
@@ -343,6 +345,23 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                   >
                     <Download className="size-3.5" />
                   </button>
+                  {language && isPreviewableCode(language) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Open canvas preview with this code block
+                        const canvasEvent = new CustomEvent("becomeai:preview-code", {
+                          detail: { code: codeText, language },
+                        });
+                        window.dispatchEvent(canvasEvent);
+                      }}
+                      className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-stone-400 opacity-60 transition-all hover:bg-emerald-50 hover:text-emerald-600 hover:opacity-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                      title="Preview in canvas"
+                    >
+                      <Eye className="size-3" />
+                      Preview
+                    </button>
+                  )}
                 </div>
               </div>
               <pre
