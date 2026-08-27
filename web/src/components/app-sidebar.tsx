@@ -112,32 +112,42 @@ function SidebarLink({
     <Link
       href={item.href}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-[13px] font-medium transition-all duration-200 hover-lift min-h-[40px]",
+        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all duration-150 min-h-[38px]",
         collapsed && "justify-center px-0",
         active
-          ? "bg-stone-900 text-white shadow-sm dark:bg-stone-100 dark:text-stone-900"
-          : "text-stone-500 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-white/8 dark:hover:text-white",
+          ? "bg-stone-200/80 text-stone-900 dark:bg-white/10 dark:text-white"
+          : "text-stone-500 hover:bg-stone-100/80 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-stone-200",
       )}
       title={collapsed ? item.label : undefined}
       style={{ animationDelay: `${(index || 0) * 40}ms` }}
     >
-      <Icon className={cn("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", active && "text-white dark:text-stone-900")} />
-      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+      {/* Active indicator bar */}
+      {active && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-r-full bg-stone-900 dark:bg-white animate-scale-in" />
+      )}
+      <Icon className={cn(
+        "size-4 shrink-0 transition-colors duration-150",
+        active
+          ? "text-stone-900 dark:text-white"
+          : "text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300",
+      )} />
+      {!collapsed && (
+        <span className={cn("truncate flex-1 transition-colors duration-150", active && "font-semibold")}>
+          {item.label}
+        </span>
+      )}
       {!collapsed && badgeCount !== undefined && badgeCount > 0 && (
         <span className={cn(
-          "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold min-w-[18px]",
+          "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[9px] font-bold min-w-[18px]",
           active
-            ? "bg-white/20 text-white dark:bg-stone-900/20 dark:text-stone-900"
-            : "bg-stone-200 text-stone-600 dark:bg-white/10 dark:text-stone-400",
+            ? "bg-stone-900/10 text-stone-800 dark:bg-white/15 dark:text-stone-200"
+            : "bg-stone-100 text-stone-500 dark:bg-white/5 dark:text-stone-500",
         )}>
           {badgeCount}
         </span>
       )}
       {collapsed && badgeCount !== undefined && badgeCount > 0 && (
-        <div className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-stone-50 dark:border-stone-950" />
-      )}
-      {active && !collapsed && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 size-1 rounded-full bg-current animate-scale-in" />
+        <div className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-stone-900 border-2 border-stone-50 dark:bg-white dark:border-stone-950" />
       )}
     </Link>
   );
@@ -660,23 +670,30 @@ export function AppSidebar({
                               onMobileOpenChange(false);
                             }}
                             className={cn(
-                              "group relative flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all duration-200 min-h-[40px]",
+                              "group relative flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-all duration-150 min-h-[38px]",
                               isActive
-                                ? "bg-stone-900/8 dark:bg-stone-100/8"
+                                ? "bg-stone-200/80 dark:bg-white/10"
                                 : "hover:bg-stone-100/60 dark:hover:bg-white/5",
                             )}
                             style={{ animationDelay: `${i * 30}ms` }}
                           >
                             <div className={cn(
                               "size-5 shrink-0 flex items-center justify-center rounded-md transition-colors",
-                              item.type === "image"
-                                ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                                : "bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-stone-400",
+                              isActive
+                                ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900"
+                                : item.type === "image"
+                                  ? "bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-stone-400"
+                                  : "bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-stone-400",
                             )}>
                               {item.type === "image" ? <Image className="size-3" /> : <MessageSquare className="size-3" />}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-[13px] font-medium text-stone-700 leading-tight dark:text-stone-300">
+                              <div className={cn(
+                                "truncate text-[13px] font-medium leading-tight",
+                                isActive
+                                  ? "text-stone-900 dark:text-white font-semibold"
+                                  : "text-stone-700 dark:text-stone-300",
+                              )}>
                                 {item.title}
                               </div>
                               <div className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
