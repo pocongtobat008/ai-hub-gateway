@@ -990,3 +990,141 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Syntax highlighting (highlight.js) — stone theme ───────────────────── */
+
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag {
+  color: #7c3aed;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-built_in,
+.dark .hljs-name,
+.dark .hljs-tag {
+  color: #a78bfa;
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-template-tag,
+.hljs-doctag,
+.hljs-title,
+.hljs-section {
+  color: #059669;
+}
+
+.dark .hljs-string,
+.dark .hljs-attr,
+.dark .hljs-template-tag,
+.dark .hljs-doctag,
+.dark .hljs-title,
+.dark .hljs-section {
+  color: #34d399;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion,
+.hljs-meta {
+  color: #9ca3af;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote,
+.dark .hljs-deletion,
+.dark .hljs-meta {
+  color: #6b7280;
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-literal,
+.hljs-bullet,
+.hljs-link {
+  color: #d97706;
+}
+
+.dark .hljs-number,
+.dark .hljs-regexp,
+.dark .hljs-literal,
+.dark .hljs-bullet,
+.dark .hljs-link {
+  color: #fbbf24;
+}
+
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-params {
+  color: #2563eb;
+}
+
+.dark .hljs-type,
+.dark .hljs-class .hljs-title,
+.dark .hljs-params {
+  color: #60a5fa;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: #dc2626;
+}
+
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: #f87171;
+}
+
+.hljs-addition {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+}
+
+.dark .hljs-addition {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.hljs-deletion {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.dark .hljs-deletion {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+.hljs-selector-class {
+  color: #0d9488;
+}
+
+.hljs-selector-id {
+  color: #e11d48;
+}
+
+.hljs-attribute {
+  color: #7c3aed;
+}
+
+.dark .hljs-attribute {
+  color: #a78bfa;
+}

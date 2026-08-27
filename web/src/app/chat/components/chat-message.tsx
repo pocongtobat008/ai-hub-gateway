@@ -17,6 +17,60 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import hljs from "highlight.js/lib/core";
+
+// Register commonly used languages (lightweight bundle)
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
+import json from "highlight.js/lib/languages/json";
+import bash from "highlight.js/lib/languages/bash";
+import sql from "highlight.js/lib/languages/sql";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
+import java from "highlight.js/lib/languages/java";
+import go from "highlight.js/lib/languages/go";
+import rust from "highlight.js/lib/languages/rust";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import php from "highlight.js/lib/languages/php";
+import ruby from "highlight.js/lib/languages/ruby";
+import yaml from "highlight.js/lib/languages/yaml";
+import markdown from "highlight.js/lib/languages/markdown";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
+import diff from "highlight.js/lib/languages/diff";
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("js", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("ts", typescript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("py", python);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("sh", bash);
+hljs.registerLanguage("shell", bash);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("java", java);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("rs", rust);
+hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("c", cpp);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("cs", csharp);
+hljs.registerLanguage("php", php);
+hljs.registerLanguage("ruby", ruby);
+hljs.registerLanguage("rb", ruby);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("yml", yaml);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("md", markdown);
+hljs.registerLanguage("dockerfile", dockerfile);
+hljs.registerLanguage("diff", diff);
 
 import { cn } from "@/lib/utils";
 import { messageImages, messageText, type ChatMessage } from "@/store/chat-conversations";
@@ -247,11 +301,28 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
               codeText = get_text(childProps.children as React.ReactNode);
             }
           }
+          // Fallback: extract from raw children if tree walk fails
+          if (!codeText && typeof children === "string") {
+            codeText = children;
+          }
           const blockId = `${messageId}-code-${language}-${codeText.slice(0, 20)}`;
 
+          // Syntax highlight the code
+          const highlighted = React.useMemo(() => {
+            if (!codeText) return null;
+            try {
+              if (language && hljs.getLanguage(language)) {
+                return hljs.highlight(codeText, { language }).value;
+              }
+              return hljs.highlightAuto(codeText).value;
+            } catch {
+              return null;
+            }
+          }, [codeText, language]);
+
           return (
-            <div className="my-3 group/code">
-              <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-stone-200 bg-stone-100 px-3 py-1.5 dark:border-white/10 dark:bg-white/[0.06]">
+            <div className="my-3 rounded-xl border border-stone-200 dark:border-white/10 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-stone-200 bg-stone-100 px-3 py-1.5 dark:border-white/10 dark:bg-white/[0.06]">
                 <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
                   {language || "code"}
                 </span>
@@ -261,27 +332,34 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                     text={codeText}
                     copiedId={copiedId}
                     copy={copy}
-                    label=""
-                    className="opacity-0 transition-opacity group-hover/code:opacity-100"
+                    label="Copy"
+                    className="!size-auto !px-2 !py-1 !rounded-md opacity-60 hover:opacity-100"
                   />
                   <button
                     type="button"
                     onClick={() => downloadUrl(`data:text/plain,${encodeURIComponent(codeText)}`, codeFileName(language))}
-                    className="inline-flex size-6 items-center justify-center rounded-lg text-stone-400 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover/code:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
+                    className="inline-flex size-6 items-center justify-center rounded-md text-stone-400 opacity-60 transition-all hover:bg-stone-200 hover:text-stone-600 hover:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
                     title="Download file"
                   >
-                    <Download className="size-3" />
+                    <Download className="size-3.5" />
                   </button>
                 </div>
               </div>
               <pre
                 className={cn(
-                  "hide-scrollbar overflow-x-auto rounded-b-xl border border-stone-200 bg-stone-50 p-3 text-[13px] leading-6 text-stone-800 dark:border-white/10 dark:bg-black/40 dark:text-stone-100",
+                  "hide-scrollbar overflow-x-auto bg-stone-50 p-4 text-[13px] leading-6 text-stone-800 dark:bg-black/40 dark:text-stone-100",
                   className,
                 )}
                 {...props}
               >
-                {children}
+                {highlighted ? (
+                  <code
+                    className="font-mono"
+                    dangerouslySetInnerHTML={{ __html: highlighted }}
+                  />
+                ) : (
+                  <code className="font-mono">{children}</code>
+                )}
               </pre>
             </div>
           );
