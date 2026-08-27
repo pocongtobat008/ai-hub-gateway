@@ -94,7 +94,7 @@ function SettingsPageContent() {
                   className="settings-tab flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-medium transition-all duration-200 sm:px-3.5 sm:py-2 sm:text-[13px]"
                 >
                   <tab.icon className="size-3.5" />
-                  <span className="hidden sm:inline">{tab.title}</span>
+                  <span className="hidden min-[480px]:inline">{tab.title}</span>
                 </TabsTrigger>
               ))}
             </TabsList>

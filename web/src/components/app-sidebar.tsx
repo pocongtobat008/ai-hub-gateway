@@ -521,7 +521,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={() => onCollapsedChange(!collapsed)}
-            className="hidden lg:inline-flex size-6 shrink-0 items-center justify-center rounded-md text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:scale-110 dark:hover:bg-white/8 dark:hover:text-stone-200"
+            className="hidden lg:inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 hover:scale-110 dark:hover:bg-white/8 dark:hover:text-stone-200"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <PanelLeftOpen className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
@@ -530,7 +530,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={() => onMobileOpenChange(false)}
-            className="lg:hidden inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95"
+            className="lg:hidden inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95"
             aria-label="Close menu"
             title="Close menu"
           >
@@ -736,7 +736,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => (window as any).__openProfile?.()}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95 dark:hover:bg-white/10 dark:hover:text-white"
+              className="inline-flex size-10 items-center justify-center rounded-xl text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-700 active:bg-stone-200 active:scale-95 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label="Profile & Skills"
               title="Profile & Skills"
             >
@@ -745,7 +745,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-100 active:scale-95 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+              className="inline-flex size-10 items-center justify-center rounded-xl text-stone-400 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-100 active:scale-95 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
               aria-label="Logout"
               title="Logout"
             >

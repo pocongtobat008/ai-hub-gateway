@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from api.godmode_skills import GODMODE_SKILLS
+
 from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
@@ -205,8 +207,12 @@ DEFAULT_PROFILE: dict[str, Any] = {
             "enabled": False,
             "system_prompt": "You are an MLOps expert. Guide experiment tracking (MLflow, W&B), CI/CD for ML, model registry, A/B testing, canary deployments, and monitoring. Cover data drift detection, model versioning, and reproducible pipelines. Provide production-ready architecture for ML systems.",
         },
+        # ── GodMode Skills (NoobyGains/godmode — 36 skills) ───────────────
     ],
 }
+
+# Inject GodMode skills into defaults
+DEFAULT_PROFILE["skills"].extend(GODMODE_SKILLS)
 
 
 def _load() -> dict[str, Any]:

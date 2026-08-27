@@ -338,7 +338,7 @@ function Markdown({ text, messageId }: { text: string; messageId: string }) {
                   <button
                     type="button"
                     onClick={() => downloadUrl(`data:text/plain,${encodeURIComponent(codeText)}`, codeFileName(language))}
-                    className="inline-flex size-6 items-center justify-center rounded-md text-stone-400 opacity-60 transition-all hover:bg-stone-200 hover:text-stone-600 hover:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-stone-400 opacity-60 transition-all hover:bg-stone-200 hover:text-stone-600 hover:opacity-100 dark:hover:bg-white/10 dark:hover:text-stone-300"
                     title="Download file"
                   >
                     <Download className="size-3.5" />
@@ -588,7 +588,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
             <button
               type="button"
               onClick={() => downloadUrl(`data:text/markdown,${encodeURIComponent(text)}`, `becomeai-response-${Date.now()}.md`)}
-              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300 min-h-[32px]"
               title="Download as Markdown"
             >
               <Download className="size-3" />
@@ -609,7 +609,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
                   })
                   .catch(() => {});
               }}
-              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300 min-h-[32px]"
               title="Export as Word"
             >
               <FileText className="size-3" />
@@ -630,7 +630,7 @@ function AssistantMessage({ message, isStreaming }: { message: ChatMessage; isSt
                   })
                   .catch(() => {});
               }}
-              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium text-stone-400 transition hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10 dark:hover:text-stone-300 min-h-[32px]"
               title="Export as PowerPoint"
             >
               <Presentation className="size-3" />
