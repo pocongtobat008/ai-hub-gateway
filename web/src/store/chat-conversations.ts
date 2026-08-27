@@ -4,7 +4,7 @@ export type ChatContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
-export type ChatMessageRole = "user" | "assistant";
+export type ChatMessageRole = "user" | "assistant" | "system";
 
 export type ChatMessage = {
   id: string;

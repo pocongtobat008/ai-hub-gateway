@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
+import { editImage, fetchGeminiAccounts, fetchGeminiGems, fetchModels, fetchSessionContext, generateImage, generateVideo, runGeminiDeepResearch, type GeminiAccount, type GeminiGem, type Model } from "@/lib/api";
 import { triggerConfetti } from "@/components/confetti";
 import webConfig from "@/constants/common-env";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -100,6 +100,35 @@ function buildConversationTitle(text: string) {
     return trimmed || "New chat";
   }
   return `${trimmed.slice(0, 24)}…`;
+}
+
+// ── Auto-image detection ──────────────────────────────────────────────────────
+// When the user types a prompt that sounds like an image request,
+// automatically switch to the image generation tool.
+const IMAGE_KEYWORDS_EN = /^(make|create|generate|draw|design|build|produce|paint|sketch|illustrate|render|imagine)\b.*(image|picture|photo|drawing|illustration|artwork|pic|pic of|pic of a|pic of an)/i;
+const IMAGE_KEYWORDS_ID = /^(buat|buatin|bikin|gambar|generate|create)\b.*(gambar|foto|lukisan|ilustrasi)/i;
+const IMAGE_KEYWORDS_GEN = /^(image of|picture of|a photo of|an image of|draw me|sketch of|paint a|paint an|design a|illustration of)/i;
+const IMAGE_KEYWORDS_STANDALONE = /^(make me an image|create an image|generate an image|generate image|make image|create image|buat gambar|buatin gambar|bikin gambar)/i;
+
+function shouldAutoGenerateImage(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length > 300) return false; // Too long for image prompt
+  return (
+    IMAGE_KEYWORDS_EN.test(trimmed) ||
+    IMAGE_KEYWORDS_ID.test(trimmed) ||
+    IMAGE_KEYWORDS_GEN.test(trimmed) ||
+    IMAGE_KEYWORDS_STANDALONE.test(trimmed)
+  );
+}
+
+// ── Session context injection ────────────────────────────────────────────────
+async function loadSessionContext(): Promise<string> {
+  try {
+    const data = await fetchSessionContext(5);
+    return data?.context || "";
+  } catch {
+    return "";
+  }
 }
 
 function formatConversationTime(value: string) {
@@ -813,6 +842,20 @@ function ChatPageContent() {
       return;
     }
 
+    // ── Auto-image detection: switch to image tool if prompt sounds like an image request
+    let effectiveTool = tool;
+    if (tool === "auto" && text && shouldAutoGenerateImage(text)) {
+      effectiveTool = "image";
+      setTool("image");
+      toast.info("🖼️ Detected image request — switching to Image Gen");
+    }
+
+    // ── Load session context for new conversations
+    let contextPrefix = "";
+    if (!selectedConversation) {
+      contextPrefix = await loadSessionContext();
+    }
+
     // Build file-content blocks so every provider can read the attachments
     const fileTextParts: Array<{ type: "text"; text: string }> = attachedFiles.map((file) => ({
       type: "text" as const,
@@ -843,6 +886,14 @@ function ChatPageContent() {
       createdAt: now,
     };
 
+    // ── Inject session context as system message for new conversations
+    const contextMessage: ChatMessage | null = contextPrefix && !selectedConversation ? {
+      id: createId(),
+      role: "system",
+      content: contextPrefix,
+      createdAt: now,
+    } : null;
+
     const conversationId = selectedConversationId ?? createId();
     const baseConversation: ChatConversation = selectedConversation
       ? {
@@ -855,7 +906,7 @@ function ChatPageContent() {
           title: buildConversationTitle(text || "New chat"),
           createdAt: now,
           updatedAt: now,
-          messages: [userMessage, assistantMessage],
+          messages: [...(contextMessage ? [contextMessage] : []), userMessage, assistantMessage],
         };
 
     shouldStickToBottomRef.current = true;
@@ -865,7 +916,7 @@ function ChatPageContent() {
     setAttachedFiles([]);
     await persistConversation(baseConversation);
 
-    if (tool !== "auto" && tool !== "anti-slop") {
+    if (effectiveTool !== "auto" && effectiveTool !== "anti-slop") {
       void runTool(conversationId, assistantMessage.id, text || "Generate", images);
     } else {
       void runStream(conversationId, assistantMessage.id, baseConversation.messages);

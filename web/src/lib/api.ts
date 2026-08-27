@@ -1638,3 +1638,29 @@ export async function fetchDashboardOverview() {
 export async function fetchDashboardUsage(days = 14) {
   return httpRequest<DashboardOverview["usage"]>(`/api/dashboard/usage?days=${days}`);
 }
+
+// ── Session Memory ──────────────────────────────────────────────────────────
+
+export type SessionMemoryContext = {
+  context: string;
+  summaries: Array<{
+    id: string;
+    title: string;
+    topics: string;
+    message_count: number;
+    last_response_preview: string;
+    updated_at: string;
+  }>;
+  total_conversations: number;
+};
+
+export async function fetchSessionContext(limit = 10) {
+  return httpRequest<SessionMemoryContext>(`/api/session-memory/context?limit=${limit}`);
+}
+
+export async function syncSessionMemory(conversationId: string) {
+  return httpRequest<{ ok: boolean; summary?: unknown }>("/api/session-memory/sync", {
+    method: "POST",
+    body: JSON.stringify({ conversation_id: conversationId }),
+  });
+}
