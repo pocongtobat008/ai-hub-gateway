@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Clipboard, Globe, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, Clipboard, Globe, Key, LoaderCircle, Pencil, Plus, PlugZap, RefreshCw, RotateCcw, Server, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,140 @@ import {
 } from "@/lib/api";
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
-  normal: { label: "Normal", className: "bg-emerald-50 text-emerald-700" },
-  rate_limited: { label: "Rate limited", className: "bg-amber-50 text-amber-700" },
-  abnormal: { label: "Abnormal", className: "bg-rose-50 text-rose-700" },
-  disabled: { label: "Disabled", className: "bg-stone-100 text-stone-500" },
+  normal: { label: "Normal", className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" },
+  rate_limited: { label: "Rate limited", className: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" },
+  abnormal: { label: "Abnormal", className: "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400" },
+  disabled: { label: "Disabled", className: "bg-stone-100 text-stone-500 dark:bg-white/5 dark:text-stone-500" },
 };
+
+// ── Group accounts by base_url ─────────────────────────────────────────────
+
+type ProviderGroup = {
+  base_url: string;
+  accounts: CustomAccount[];
+  label: string;
+  totalModels: string[];
+  normalCount: number;
+  abnormalCount: number;
+};
+
+function groupByProvider(accounts: CustomAccount[]): ProviderGroup[] {
+  const map = new Map<string, CustomAccount[]>();
+  for (const acc of accounts) {
+    const key = acc.base_url || "unknown";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(acc);
+  }
+
+  return Array.from(map.entries())
+    .map(([base_url, accs]) => {
+      const allModels = [...new Set(accs.flatMap((a) => a.models || []))];
+      const normalCount = accs.filter((a) => a.status === "normal").length;
+      const abnormalCount = accs.length - normalCount;
+      const label = accs[0]?.label?.replace(/ #\d+$/, "") || base_url.split("/").pop() || "Custom";
+      return { base_url, accounts: accs, label, totalModels: allModels, normalCount, abnormalCount };
+    })
+    .sort((a, b) => b.accounts.length - a.accounts.length);
+}
+
+// ── Provider Card ──────────────────────────────────────────────────────────
+
+function ProviderCard({
+  group,
+  onTest,
+  onRefresh,
+  onEdit,
+  onDelete,
+  testingId,
+  refreshingId,
+}: {
+  group: ProviderGroup;
+  onTest: (acc: CustomAccount) => void;
+  onRefresh: (acc: CustomAccount) => void;
+  onEdit: (acc: CustomAccount) => void;
+  onDelete: (acc: CustomAccount) => void;
+  testingId: string | null;
+  refreshingId: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const allNormal = group.normalCount === group.accounts.length;
+
+  return (
+    <Card className="transition-shadow hover:shadow-md">
+      <CardContent className="p-4">
+        {/* Header — always visible */}
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 text-white shadow-md dark:from-stone-300 dark:to-stone-500 dark:text-stone-950">
+            <Server className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-stone-900 dark:text-stone-100">{group.label}</span>
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${allNormal ? STATUS_META.normal.className : STATUS_META.abnormal.className}`}>
+                {group.normalCount}/{group.accounts.length} OK
+              </span>
+            </div>
+            <div className="mt-0.5 font-mono text-[11px] text-stone-500 dark:text-stone-400 truncate">{group.base_url}</div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {group.totalModels.slice(0, 6).map((m) => (
+                <span key={m} className="inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 dark:bg-white/10 dark:text-stone-400">{m}</span>
+              ))}
+              {group.totalModels.length > 6 && (
+                <span className="text-[10px] text-stone-400">+{group.totalModels.length - 6} more</span>
+              )}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => { for (const acc of group.accounts) onTest(acc); }}>
+              <PlugZap className="size-3" /> Test All
+            </Button>
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-white/10"
+            >
+              {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded — individual keys */}
+        {expanded && (
+          <div className="mt-3 space-y-1.5 border-t border-stone-100 pt-3 dark:border-white/5">
+            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">API Keys ({group.accounts.length})</p>
+            {group.accounts.map((acc) => {
+              const meta = STATUS_META[acc.status] || STATUS_META.normal;
+              return (
+                <div key={acc.id} className="flex items-center gap-2 rounded-lg border border-stone-100 bg-stone-50/50 px-3 py-2 transition hover:bg-stone-100/80 dark:border-white/5 dark:bg-white/[0.02] dark:hover:bg-white/5">
+                  <Key className="size-3 shrink-0 text-stone-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[11px] text-stone-700 dark:text-stone-300">{acc.api_key_masked}</span>
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium ${meta.className}`}>{meta.label}</span>
+                    </div>
+                    {acc.last_error && <div className="text-[10px] text-rose-500 truncate">{acc.last_error}</div>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="size-6" onClick={() => onTest(acc)} disabled={testingId === acc.id}>
+                      {testingId === acc.id ? <LoaderCircle className="size-3 animate-spin" /> : <PlugZap className="size-3" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-6" onClick={() => onRefresh(acc)} disabled={refreshingId === acc.id}>
+                      {refreshingId === acc.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-6" onClick={() => onEdit(acc)}><Pencil className="size-3" /></Button>
+                    <Button variant="ghost" size="icon" className="size-6 text-rose-500 hover:text-rose-600" onClick={() => onDelete(acc)}><Trash2 className="size-3" /></Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────
 
 function CustomAccountsContent() {
   const [accounts, setAccounts] = useState<CustomAccount[]>([]);
@@ -43,33 +172,25 @@ function CustomAccountsContent() {
   const [form, setForm] = useState({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<CustomAccount | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
-  const [page, setPage] = useState(1);
-  const didLoadRef = useRef(false);
-  const PER_PAGE = 15;
+  const [deleteConfirm, setDeleteConfirm] = useState<CustomAccount | null>(null);
+  const [testingAll, setTestingAll] = useState(false);
 
-  const loadAccounts = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
+  const loadAccounts = useCallback(async () => {
     try {
       const data = await fetchCustomAccounts();
-      setAccounts(data.accounts);
-    } catch (error) {
-      if (!silent) toast.error(error instanceof Error ? error.message : "Failed to load accounts");
+      setAccounts(data.accounts || []);
+    } catch {
+      toast.error("Failed to load accounts");
     } finally {
-      if (!silent) setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (didLoadRef.current) return;
-    didLoadRef.current = true;
-    void loadAccounts();
-  }, [loadAccounts]);
+  useEffect(() => { void loadAccounts(); }, [loadAccounts]);
+
+  const groups = useMemo(() => groupByProvider(accounts), [accounts]);
 
   const openAdd = () => {
     setEditing(null);
@@ -91,105 +212,62 @@ function CustomAccountsContent() {
   };
 
   const handleFetchModels = async () => {
-    if (!form.baseUrl.trim()) {
-      toast.error("Enter a base URL first");
-      return;
-    }
+    if (!form.baseUrl.trim()) { toast.error("Enter a base URL first"); return; }
     setIsFetching(true);
     try {
       const data = await validateCustomModels({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim() });
       if (data.ok && data.models.length > 0) {
-        // Append fetched models to existing text (deduplicate)
         const existing = form.modelsText.split("\n").map((m) => m.trim()).filter(Boolean);
         const allModels = [...new Set([...existing, ...data.models])];
         setForm({ ...form, modelsText: allModels.join("\n") });
-        toast.success(`Found ${data.models.length} models! Select the ones you want.`);
+        toast.success(`Found ${data.models.length} models`);
       } else {
-        toast.warning("No models found. Check URL and API key, or type models manually.");
+        toast.error("No models found or endpoint unreachable");
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Fetch failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to fetch models");
     } finally {
       setIsFetching(false);
     }
   };
 
   const handleSave = async () => {
-    if (!form.baseUrl.trim()) {
-      toast.error("Base URL is required");
-      return;
-    }
+    if (!form.baseUrl.trim()) { toast.error("Base URL is required"); return; }
     const models = form.modelsText.split("\n").map((m) => m.trim()).filter(Boolean);
-    if (models.length === 0) {
-      toast.error("Add at least one model (one per line)");
-      return;
-    }
+    if (models.length === 0) { toast.error("Add at least one model"); return; }
     setIsSaving(true);
     try {
       if (editing) {
         await deleteCustomAccount(editing.id);
-        await createCustomAccount({
-          base_url: form.baseUrl.trim(),
-          api_key: form.apiKey.trim(),
-          models,
-          label: form.label.trim() || "",
-        });
+        await createCustomAccount({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim(), models, label: form.label.trim() || "" });
         toast.success("Account updated");
       } else if (form.bulkMode && form.bulkKeys.trim()) {
-        // Bulk mode — add multiple accounts
         const keys = form.bulkKeys.split("\n").map((k) => k.trim()).filter(Boolean);
-        if (keys.length === 0) {
-          toast.error("No valid API keys provided");
-          return;
-        }
-        const result = await addCustomBulkAccounts({
-          base_url: form.baseUrl.trim(),
-          api_keys: keys,
-          models,
-          label: form.label.trim() || "",
-        });
-        toast.success(`${result.added} account(s) added successfully`);
+        if (keys.length === 0) { toast.error("No valid API keys"); return; }
+        const result = await addCustomBulkAccounts({ base_url: form.baseUrl.trim(), api_keys: keys, models, label: form.label.trim() || "" });
+        toast.success(`${result.added} account(s) added`);
       } else {
-        // Single mode
-        await createCustomAccount({
-          base_url: form.baseUrl.trim(),
-          api_key: form.apiKey.trim(),
-          models,
-          label: form.label.trim() || "",
-        });
+        await createCustomAccount({ base_url: form.baseUrl.trim(), api_key: form.apiKey.trim(), models, label: form.label.trim() || "" });
         toast.success("Account added");
       }
       setDialogOpen(false);
       await loadAccounts();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save account");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleDelete = async (account: CustomAccount) => {
-    try {
-      await deleteCustomAccount(account.id);
-      toast.success("Account deleted");
-      setDeleteConfirm(null);
-      await loadAccounts();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete account");
     }
   };
 
   const handleTest = async (account: CustomAccount) => {
     setTestingId(account.id);
     try {
-      const data = await testCustom({ account_id: account.id });
-      if (data.ok) {
-        toast.success(`${account.label || "Account"}: works!`);
-      } else {
-        toast.error(`Test failed: ${data.error}`);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Test failed");
+      const result = await testCustom({ account_id: account.id });
+      if (result.ok) toast.success(`${account.label || account.base_url}: OK`);
+      else toast.error(`${account.label || account.base_url}: ${result.error || "Failed"}`);
+      await loadAccounts();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test failed");
     } finally {
       setTestingId(null);
     }
@@ -198,183 +276,100 @@ function CustomAccountsContent() {
   const handleRefreshOne = async (account: CustomAccount) => {
     setRefreshingId(account.id);
     try {
-      const data = await testCustom({ account_id: account.id });
-      if (data.ok) {
-        toast.success(`${account.label || "Account"}: refreshed OK`);
-      } else {
-        toast.error(`${account.label || "Account"}: ${data.error}`);
-      }
-      await loadAccounts(true);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Refresh failed");
+      await validateCustomModels({ base_url: account.base_url, api_key: "" });
+      toast.success("Refreshed");
+      await loadAccounts();
+    } catch {
+      toast.error("Refresh failed");
     } finally {
       setRefreshingId(null);
     }
   };
 
-  const handleRefreshAll = async () => {
-    setIsRefreshingAll(true);
+  const handleTestAll = async () => {
+    setTestingAll(true);
     try {
-      toast.info("Testing all accounts...");
-      const data = await testAllCustom();
-      await loadAccounts(true);
-      if (data.failed > 0) {
-        toast.warning(`Refreshed: ${data.passed} OK, ${data.failed} failed (out of ${data.total})`);
-      } else {
-        toast.success(`All ${data.passed} accounts OK!`);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Refresh failed");
-    } finally {
-      setIsRefreshingAll(false);
-    }
-  };
-
-  const handleResetAll = async () => {
-    setIsResetting(true);
-    try {
-      const data = await resetCustomAccounts();
+      const result = await testAllCustom();
+      toast.success(`Tested: ${result.passed}/${result.total} passed`);
       await loadAccounts();
-      toast.success(`Reset ${data.reset} accounts to normal`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Reset failed");
+    } catch {
+      toast.error("Test all failed");
     } finally {
-      setIsResetting(false);
+      setTestingAll(false);
     }
   };
 
-  const sortedAccounts = [...accounts].sort((a, b) => {
-    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return db - da;
-  });
-  const pageCount = Math.max(1, Math.ceil(sortedAccounts.length / PER_PAGE));
-  const safePage = Math.min(page, pageCount);
-  const startIdx = (safePage - 1) * PER_PAGE;
-  const pagedAccounts = sortedAccounts.slice(startIdx, startIdx + PER_PAGE);
+  const handleDelete = async (account: CustomAccount) => {
+    try {
+      await deleteCustomAccount(account.id);
+      toast.success("Deleted");
+      setDeleteConfirm(null);
+      await loadAccounts();
+    } catch {
+      toast.error("Delete failed");
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm("Reset all custom account statuses?")) return;
+    try {
+      const result = await resetCustomAccounts();
+      toast.success(`Reset ${result.reset} accounts`);
+      await loadAccounts();
+    } catch {
+      toast.error("Reset failed");
+    }
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => toast.success("Copied")).catch(() => {});
+  };
+
+  if (isLoading) {
+    return <div className="flex min-h-[40vh] items-center justify-center"><LoaderCircle className="size-5 animate-spin text-stone-400" /></div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-            Custom / Local Providers
-            <span className="ml-3 inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-sm font-bold text-stone-700 dark:bg-white/10 dark:text-stone-300">
-              {accounts.length}
-            </span>
-          </h1>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            Add any OpenAI-compatible API — Ollama, vLLM, LM Studio, local servers, etc.
-          </p>
+          <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">Custom Providers</h1>
+          <p className="text-xs text-stone-500">{accounts.length} accounts across {groups.length} provider(s)</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowHelp(!showHelp)} className="gap-1.5">
-            <Clipboard className="size-4" /> Guide
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleReset} className="gap-1"><RotateCcw className="size-3.5" /> Reset</Button>
+          <Button variant="outline" size="sm" onClick={() => void handleTestAll()} disabled={testingAll} className="gap-1">
+            {testingAll ? <LoaderCircle className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />} Test All
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void handleRefreshAll()} disabled={isRefreshingAll || isResetting || accounts.length === 0} className="gap-1.5">
-            <RefreshCw className={`size-4 ${isRefreshingAll ? "animate-spin" : ""}`} /> Refresh All
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => void handleResetAll()} disabled={isRefreshingAll || isResetting} className="gap-1.5">
-            <RotateCcw className={`size-4 ${isResetting ? "animate-spin" : ""}`} /> Reset All
-          </Button>
-          <Button onClick={openAdd} size="sm" className="gap-1.5">
-            <Plus className="size-4" /> Add Provider
-          </Button>
+          <Button size="sm" onClick={openAdd} className="gap-1.5"><Plus className="size-4" /> Add Provider</Button>
         </div>
       </div>
 
-      {showHelp && (
-        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
-          <CardContent className="p-4 text-sm space-y-2">
-            <div className="font-semibold text-blue-800 dark:text-blue-300">How to add a provider</div>
-            <ol className="list-decimal list-inside space-y-1 text-blue-700 dark:text-blue-400 text-xs">
-              <li>Enter the <strong>Base URL</strong> (e.g. <code>http://localhost:11434</code>)</li>
-              <li>Enter <strong>API Key</strong> if needed (leave empty if not)</li>
-              <li>Click <strong>Fetch Models</strong> or type models manually (one per line)</li>
-              <li>Click <strong>Add</strong></li>
-            </ol>
-            <div className="text-[11px] text-blue-600 dark:text-blue-500">
-              <strong>Examples:</strong> Ollama <code>localhost:11434</code> · LM Studio <code>localhost:1234</code> · vLLM <code>localhost:8000</code>
-            </div>
+      {/* Provider Cards — grouped by base_url */}
+      {groups.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Globe className="mx-auto mb-3 size-8 text-stone-300" />
+            <p className="text-sm font-medium text-stone-600">No custom providers configured</p>
+            <p className="mt-1 text-xs text-stone-400">Add an OpenAI-compatible endpoint to get started</p>
+            <Button onClick={openAdd} size="sm" className="mt-4 gap-1.5"><Plus className="size-4" /> Add Provider</Button>
           </CardContent>
         </Card>
-      )}
-
-      <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="p-3 text-center">
-          <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{accounts.length}</div>
-          <div className="text-xs text-stone-500">Total</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-600">{accounts.filter((a) => a.status === "normal").length}</div>
-          <div className="text-xs text-stone-500">Active</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-3 text-center">
-          <div className="text-2xl font-bold text-amber-600">{accounts.filter((a) => a.status !== "normal").length}</div>
-          <div className="text-xs text-stone-500">Issues</div>
-        </CardContent></Card>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12"><LoaderCircle className="size-5 animate-spin text-stone-400" /></div>
-      ) : accounts.length === 0 ? (
-        <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Globe className="mb-3 size-8 text-stone-300 dark:text-stone-600" />
-          <div className="text-sm font-medium text-stone-600 dark:text-stone-400">No custom providers configured</div>
-          <div className="mt-1 text-xs text-stone-400">Add an OpenAI-compatible endpoint to get started</div>
-          <Button onClick={openAdd} size="sm" className="mt-4 gap-1.5"><Plus className="size-4" /> Add Provider</Button>
-        </CardContent></Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {pagedAccounts.map((account) => {
-            const meta = STATUS_META[account.status] || STATUS_META.normal;
-            return (
-              <Card key={account.id} className="transition-shadow hover:shadow-md">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{account.label || "Custom"}</span>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${meta.className}`}>{meta.label}</span>
-                      </div>
-                      <div className="mt-1 font-mono text-[11px] text-stone-500 dark:text-stone-400 truncate">{account.base_url}</div>
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {(account.models || []).slice(0, 4).map((m) => (
-                          <span key={m} className="inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-400">{m}</span>
-                        ))}
-                        {(account.models || []).length > 4 && (
-                          <span className="text-[10px] text-stone-400">+{(account.models || []).length - 4}</span>
-                        )}
-                      </div>
-                      {account.last_error && <div className="mt-1 text-[11px] text-rose-500 truncate">{account.last_error}</div>}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => void handleTest(account)} disabled={testingId === account.id}>
-                        {testingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <PlugZap className="size-3" />} Test
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-1 h-7 px-2 text-[11px]" onClick={() => void handleRefreshOne(account)} disabled={refreshingId === account.id}>
-                        {refreshingId === account.id ? <LoaderCircle className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(account)}><Pencil className="size-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="size-7 text-rose-500 hover:text-rose-600" onClick={() => setDeleteConfirm(account)}><Trash2 className="size-3.5" /></Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {pageCount > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-3">
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="text-sm text-stone-500">{safePage} / {pageCount} ({sortedAccounts.length})</span>
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount}>
-            <ChevronRight className="size-4" />
-          </Button>
+        <div className="space-y-3">
+          {groups.map((group) => (
+            <ProviderCard
+              key={group.base_url}
+              group={group}
+              onTest={handleTest}
+              onRefresh={handleRefreshOne}
+              onEdit={openEdit}
+              onDelete={(acc) => setDeleteConfirm(acc)}
+              testingId={testingId}
+              refreshingId={refreshingId}
+            />
+          ))}
         </div>
       )}
 
@@ -388,85 +383,36 @@ function CustomAccountsContent() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Base URL *</label>
-              <Input
-                value={form.baseUrl}
-                onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
-                placeholder="http://localhost:11434"
-                className="font-mono text-xs"
-              />
+              <Input value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://api.example.com/v1" className="font-mono text-xs" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
                 {!editing && (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, bulkMode: !form.bulkMode, apiKey: "", bulkKeys: "" })}
-                    className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                  >
+                  <button type="button" onClick={() => setForm({ ...form, bulkMode: !form.bulkMode, apiKey: "", bulkKeys: "" })} className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
                     {form.bulkMode ? "Single key" : "Bulk add"}
                   </button>
                 )}
               </div>
               {form.bulkMode && !editing ? (
                 <div className="space-y-1.5">
-                  <textarea
-                    value={form.bulkKeys}
-                    onChange={(e) => setForm({ ...form, bulkKeys: e.target.value })}
-                    placeholder="Paste multiple API keys, one per line:
-sk-key1...
-sk-key2...
-sk-key3..."
-                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]"
-                    rows={4}
-                  />
-                  <p className="text-[11px] text-stone-400">
-                    {form.bulkKeys.split('\n').filter((k) => k.trim()).length} key(s) detected — each will create a separate account with round-robin
-                  </p>
+                  <textarea value={form.bulkKeys} onChange={(e) => setForm({ ...form, bulkKeys: e.target.value })} placeholder={"Paste API keys, one per line:\nsk-key1...\nsk-key2..."} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]" rows={4} />
+                  <p className="text-[11px] text-stone-400">{form.bulkKeys.split("\n").filter((k) => k.trim()).length} key(s) — each creates a separate account</p>
                 </div>
               ) : (
-                <Input
-                  value={form.apiKey}
-                  onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                  placeholder="sk-... (leave empty if not needed)"
-                  className="font-mono text-xs"
-                  type="password"
-                />
+                <Input value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} placeholder="sk-... (leave empty if not needed)" className="font-mono text-xs" type="password" />
               )}
             </div>
-
-            {/* Fetch Models button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void handleFetchModels()}
-              disabled={isFetching || !form.baseUrl.trim()}
-              className="gap-1.5"
-            >
-              {isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <Zap className="size-4" />}
-              Fetch Models from Server
+            <Button variant="outline" size="sm" onClick={() => void handleFetchModels()} disabled={isFetching || !form.baseUrl.trim()} className="gap-1.5">
+              {isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <Zap className="size-4" />} Fetch Models
             </Button>
-
-            {/* Models textarea */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
-                Models <span className="text-stone-400 font-normal">(one per line)</span>
-              </label>
-              <textarea
-                value={form.modelsText}
-                onChange={(e) => setForm({ ...form, modelsText: e.target.value })}
-                placeholder={"llama-3.1-8b\ncodellama-13b\nmistral-7b"}
-                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[100px]"
-                rows={5}
-              />
-              <p className="text-[11px] text-stone-400">
-                Type model names or click Fetch Models to auto-detect
-              </p>
+              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Models <span className="text-stone-400 font-normal">(one per line)</span></label>
+              <textarea value={form.modelsText} onChange={(e) => setForm({ ...form, modelsText: e.target.value })} placeholder={"gpt-4o\nclaude-3-opus\nmistral-large"} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[100px]" rows={5} />
             </div>
-
             <div className="space-y-2">
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Label</label>
-              <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="My Ollama Server" />
+              <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="My API Provider" />
             </div>
           </div>
           <DialogFooter>
@@ -479,15 +425,16 @@ sk-key3..."
         </DialogContent>
       </Dialog>
 
+      {/* Delete Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Provider</DialogTitle>
-            <DialogDescription>Delete this custom provider?</DialogDescription>
+            <DialogTitle>Delete Account</DialogTitle>
+            <DialogDescription>Delete this API key? This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteConfirm && void handleDelete(deleteConfirm)}>Delete</Button>
+            <Button variant="destructive" onClick={() => void handleDelete(deleteConfirm!)}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -496,9 +443,7 @@ sk-key3..."
 }
 
 export default function CustomAccountsPage() {
-  const { isCheckingAuth } = useAuthGuard(["admin"]);
-  if (isCheckingAuth) {
-    return <div className="flex min-h-[50vh] items-center justify-center"><LoaderCircle className="size-5 animate-spin text-stone-400" /></div>;
-  }
+  const { isCheckingAuth } = useAuthGuard();
+  if (isCheckingAuth) return <div className="flex min-h-[40vh] items-center justify-center"><LoaderCircle className="size-5 animate-spin text-stone-400" /></div>;
   return <CustomAccountsContent />;
 }
