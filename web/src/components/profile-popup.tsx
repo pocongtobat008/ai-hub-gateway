@@ -109,7 +109,8 @@ const EXPERTISE_OPTIONS = [
 
 // ── Built-in skills with lucide icons ────────────────────────────────────────
 
-const BUILTIN_SKILLS: Record<string, { icon: string; label: string; desc: string }> = {
+const BUILTIN_SKILLS: Record<string, { icon: string; label: string; desc: string; category?: string }> = {
+  // General
   "code-helper": { icon: "code", label: "Code Helper", desc: "Write, debug, and explain code" },
   "creative-writer": { icon: "pen", label: "Creative Writer", desc: "Stories, articles, creative content" },
   "data-analyst": { icon: "chart", label: "Data Analyst", desc: "Analyze data and find insights" },
@@ -118,6 +119,21 @@ const BUILTIN_SKILLS: Record<string, { icon: string; label: string; desc: string
   "image-expert": { icon: "palette", label: "Image Expert", desc: "Generate image prompts" },
   "researcher": { icon: "search", label: "Researcher", desc: "Deep research with citations" },
   "business-advisor": { icon: "briefcase", label: "Business Advisor", desc: "Strategy and financial advice" },
+  // AI Research (Orchestra-Research)
+  "ai-autoresearch": { icon: "brain", label: "Auto Research", desc: "Autonomous research orchestration", category: "AI Research" },
+  "ai-ideation": { icon: "sparkles", label: "Research Ideation", desc: "Brainstorm novel research ideas", category: "AI Research" },
+  "ai-paper-writing": { icon: "pen", label: "ML Paper Writing", desc: "Academic paper writing (LaTeX)", category: "AI Research" },
+  "ai-fine-tuning": { icon: "code", label: "Fine-Tuning Expert", desc: "LoRA, PEFT, Axolotl, Unsloth", category: "AI Research" },
+  "ai-prompt-eng": { icon: "sparkles", label: "Prompt Engineering", desc: "CoT, Few-shot, ReAct, ToT", category: "AI Research" },
+  "ai-rag": { icon: "search", label: "RAG Expert", desc: "Retrieval-Augmented Generation", category: "AI Research" },
+  "ai-agents": { icon: "bot", label: "AI Agents", desc: "Autonomous agents & tool use", category: "AI Research" },
+  "ai-inference": { icon: "bot", label: "Inference & Serving", desc: "vLLM, TensorRT-LLM, SGLang", category: "AI Research" },
+  "ai-safety": { icon: "shield", label: "AI Safety & Alignment", desc: "RLHF, red-teaming, guardrails", category: "AI Research" },
+  "ai-distributed": { icon: "brain", label: "Distributed Training", desc: "DeepSpeed, FSDP, Megatron", category: "AI Research" },
+  "ai-evaluation": { icon: "chart", label: "Model Evaluation", desc: "Benchmarks, metrics, testing", category: "AI Research" },
+  "ai-data": { icon: "chart", label: "Data Processing", desc: "NeMo Curator, dedup, quality", category: "AI Research" },
+  "ai-optimization": { icon: "code", label: "Model Optimization", desc: "Quantization, pruning, distill", category: "AI Research" },
+  "ai-mlops": { icon: "code", label: "MLOps", desc: "CI/CD, experiment tracking", category: "AI Research" },
 };
 
 export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
