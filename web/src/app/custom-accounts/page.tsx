@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import {
+  addCustomBulkAccounts,
   createCustomAccount,
   deleteCustomAccount,
   fetchCustomAccounts,
@@ -39,7 +40,7 @@ function CustomAccountsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAccount | null>(null);
-  const [form, setForm] = useState({ baseUrl: "", apiKey: "", label: "", modelsText: "" });
+  const [form, setForm] = useState({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<CustomAccount | null>(null);
@@ -72,7 +73,7 @@ function CustomAccountsContent() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ baseUrl: "", apiKey: "", label: "", modelsText: "" });
+    setForm({ baseUrl: "", apiKey: "", label: "", modelsText: "", bulkMode: false, bulkKeys: "" });
     setDialogOpen(true);
   };
 
@@ -83,6 +84,8 @@ function CustomAccountsContent() {
       apiKey: "",
       label: account.label || "",
       modelsText: (account.models || []).join("\n"),
+      bulkMode: false,
+      bulkKeys: "",
     });
     setDialogOpen(true);
   };
@@ -125,14 +128,37 @@ function CustomAccountsContent() {
     try {
       if (editing) {
         await deleteCustomAccount(editing.id);
+        await createCustomAccount({
+          base_url: form.baseUrl.trim(),
+          api_key: form.apiKey.trim(),
+          models,
+          label: form.label.trim() || "",
+        });
+        toast.success("Account updated");
+      } else if (form.bulkMode && form.bulkKeys.trim()) {
+        // Bulk mode — add multiple accounts
+        const keys = form.bulkKeys.split("\n").map((k) => k.trim()).filter(Boolean);
+        if (keys.length === 0) {
+          toast.error("No valid API keys provided");
+          return;
+        }
+        const result = await addCustomBulkAccounts({
+          base_url: form.baseUrl.trim(),
+          api_keys: keys,
+          models,
+          label: form.label.trim() || "",
+        });
+        toast.success(`${result.added} account(s) added successfully`);
+      } else {
+        // Single mode
+        await createCustomAccount({
+          base_url: form.baseUrl.trim(),
+          api_key: form.apiKey.trim(),
+          models,
+          label: form.label.trim() || "",
+        });
+        toast.success("Account added");
       }
-      await createCustomAccount({
-        base_url: form.baseUrl.trim(),
-        api_key: form.apiKey.trim(),
-        models,
-        label: form.label.trim() || "",
-      });
-      toast.success(editing ? "Account updated" : "Account added");
       setDialogOpen(false);
       await loadAccounts();
     } catch (error) {
@@ -370,14 +396,43 @@ function CustomAccountsContent() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
-              <Input
-                value={form.apiKey}
-                onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                placeholder="sk-... (leave empty if not needed)"
-                className="font-mono text-xs"
-                type="password"
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">API Key</label>
+                {!editing && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, bulkMode: !form.bulkMode, apiKey: "", bulkKeys: "" })}
+                    className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                  >
+                    {form.bulkMode ? "Single key" : "Bulk add"}
+                  </button>
+                )}
+              </div>
+              {form.bulkMode && !editing ? (
+                <div className="space-y-1.5">
+                  <textarea
+                    value={form.bulkKeys}
+                    onChange={(e) => setForm({ ...form, bulkKeys: e.target.value })}
+                    placeholder="Paste multiple API keys, one per line:
+sk-key1...
+sk-key2...
+sk-key3..."
+                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-white/5 min-h-[80px]"
+                    rows={4}
+                  />
+                  <p className="text-[11px] text-stone-400">
+                    {form.bulkKeys.split('\n').filter((k) => k.trim()).length} key(s) detected — each will create a separate account with round-robin
+                  </p>
+                </div>
+              ) : (
+                <Input
+                  value={form.apiKey}
+                  onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+                  placeholder="sk-... (leave empty if not needed)"
+                  className="font-mono text-xs"
+                  type="password"
+                />
+              )}
             </div>
 
             {/* Fetch Models button */}

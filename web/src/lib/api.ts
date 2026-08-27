@@ -1372,6 +1372,18 @@ export async function createCustomAccount(input: {
   });
 }
 
+export async function addCustomBulkAccounts(input: {
+  base_url: string;
+  api_keys: string[];
+  models?: string[];
+  label?: string;
+}) {
+  return httpRequest<{ ok: boolean; added: number; accounts: CustomAccount[] }>("/api/custom/accounts/bulk", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export async function deleteCustomAccount(id: string) {
   return httpRequest<{ ok: boolean }>(`/api/custom/accounts/${encodeURIComponent(id)}`, {
     method: "DELETE",

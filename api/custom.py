@@ -25,6 +25,13 @@ class AddCustomAccountRequest(BaseModel):
     label: str = ""
 
 
+class AddCustomBulkRequest(BaseModel):
+    base_url: str
+    api_keys: list[str]  # one key per line
+    models: list[str] = []
+    label: str = ""
+
+
 class UpdateCustomAccountRequest(BaseModel):
     label: str | None = None
     models: list[str] | None = None
@@ -55,6 +62,23 @@ def create_router() -> APIRouter:
         models = [m.strip() for m in request.models if m.strip()]
         account = add_account(base_url, request.api_key.strip(), models, request.label)
         return account
+
+    @router.post("/accounts/bulk")
+    async def add_bulk_accounts(request: AddCustomBulkRequest) -> dict[str, Any]:
+        if not request.base_url.strip():
+            raise HTTPException(status_code=400, detail="base_url is required")
+        base_url = request.base_url.strip().rstrip("/")
+        models = [m.strip() for m in request.models if m.strip()]
+        # Filter out empty lines and strip whitespace
+        keys = [k.strip() for k in request.api_keys if k.strip()]
+        if not keys:
+            raise HTTPException(status_code=400, detail="No valid API keys provided")
+        accounts = []
+        for i, key in enumerate(keys):
+            label = f"{request.label or base_url.split('/')[-1]} #{i + 1}" if len(keys) > 1 else request.label
+            acc = add_account(base_url, key, models, label)
+            accounts.append(acc)
+        return {"ok": True, "added": len(accounts), "accounts": accounts}
 
     @router.put("/accounts/{account_id}")
     async def update_custom_account(account_id: str, request: UpdateCustomAccountRequest) -> dict[str, Any]:
