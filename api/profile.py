@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from api.godmode_skills import GODMODE_SKILLS
+from api.jezweb_skills import JEZWEB_SKILLS
 
 from fastapi import APIRouter, Header
 from pydantic import BaseModel
@@ -213,6 +214,7 @@ DEFAULT_PROFILE: dict[str, Any] = {
 
 # Inject GodMode skills into defaults
 DEFAULT_PROFILE["skills"].extend(GODMODE_SKILLS)
+DEFAULT_PROFILE["skills"].extend(JEZWEB_SKILLS)
 
 
 def _load() -> dict[str, Any]:

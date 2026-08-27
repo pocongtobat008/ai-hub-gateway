@@ -118,6 +118,16 @@ const SKILL_ICONS: Record<string, React.ElementType> = {
   users: Users,
   "message-square": MessageSquare,
   "git-branch": GitBranch,
+  "credit-card": Sparkles,
+  "shopping-cart": Sparkles,
+  "package": Sparkles,
+  "smartphone": Sparkles,
+  "server": Sparkles,
+  "award": Sparkles,
+  "user-plus": Sparkles,
+  "database": Sparkles,
+  "activity": Sparkles,
+  "mic": Sparkles,
 };
 
 function SkillIcon({ icon, className }: { icon: string; className?: string }) {
@@ -196,6 +206,8 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"personality" | "skills" | "instructions">("personality");
+  const [skillSearch, setSkillSearch] = useState("");
+  const [skillFilter, setSkillFilter] = useState<"all" | "active" | "inactive" | "builtin" | "custom" | "godmode" | "jezweb">("all");
   const [isSaving, setIsSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -448,14 +460,85 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
               {activeTab === "skills" && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-stone-500">{enabledCount} skill{enabledCount !== 1 ? "s" : ""} active</p>
+                    <p className="text-xs text-stone-500">
+                      {profile.skills.filter((s) => s.enabled).length} active / {profile.skills.length} total
+                    </p>
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setAddSkillOpen(true)}>
                       <Plus className="size-3" />
                       Custom
                     </Button>
                   </div>
 
-                  {profile.skills.map((skill) => {
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="text"
+                      value={skillSearch}
+                      onChange={(e) => setSkillSearch(e.target.value)}
+                      placeholder="Search skills..."
+                      className="h-9 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-xs text-stone-700 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-white/20"
+                    />
+                    {skillSearch && (
+                      <button onClick={() => setSkillSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {([
+                      { key: "all" as const, label: "All" },
+                      { key: "active" as const, label: "Active" },
+                      { key: "inactive" as const, label: "Inactive" },
+                      { key: "builtin" as const, label: "Built-in" },
+                      { key: "custom" as const, label: "Custom" },
+                      { key: "godmode" as const, label: "GodMode" },
+                      { key: "jezweb" as const, label: "Jezweb" },
+                    ]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setSkillFilter(key)}
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
+                          skillFilter === key
+                            ? "bg-stone-900 text-white dark:bg-white dark:text-stone-900"
+                            : "bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 dark:bg-white/10 dark:text-stone-400 dark:hover:bg-white/15"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const BUILTIN_IDS = new Set(["code-helper","creative-writer","data-analyst","translator","tutor","image-expert","researcher","business-advisor"]);
+                    const filtered = profile.skills.filter((s) => {
+                      // Search
+                      if (skillSearch) {
+                        const q = skillSearch.toLowerCase();
+                        if (!s.name.toLowerCase().includes(q) && !s.description.toLowerCase().includes(q) && !s.id.toLowerCase().includes(q)) return false;
+                      }
+                      // Filter
+                      if (skillFilter === "active") return s.enabled;
+                      if (skillFilter === "inactive") return !s.enabled;
+                      if (skillFilter === "builtin") return BUILTIN_IDS.has(s.id);
+                      if (skillFilter === "custom") return !s.id.startsWith("gm-") && !s.id.startsWith("jw-") && !BUILTIN_IDS.has(s.id);
+                      if (skillFilter === "godmode") return s.id.startsWith("gm-");
+                      if (skillFilter === "jezweb") return s.id.startsWith("jw-");
+                      return true;
+                    });
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="py-8 text-center">
+                          <Search className="mx-auto mb-2 size-6 text-stone-300 dark:text-stone-600" />
+                          <p className="text-xs text-stone-400">No skills found</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+                  {filtered.map((skill) => {
                     const builtin = BUILTIN_SKILLS[skill.id];
                     const iconKey = builtin?.icon || "sparkles";
                     const label = builtin?.label || skill.name;
@@ -511,6 +594,9 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                       </div>
                     );
                   })}
+                      </div>
+                    );
+                  })()}
 
                   {/* Add Skill Form */}
                   {addSkillOpen && (
