@@ -33,6 +33,7 @@ import { Sub2APIConnections } from "./components/sub2api-connections";
 import { ThirdPartyAppsCard } from "./components/third-party-apps-card";
 import { UserKeysCard } from "./components/user-keys-card";
 import { AuthCodesCard } from "./components/auth-codes-card";
+import { BackupCard } from "./components/backup-card";
 import { useSettingsStore } from "./store";
 
 const settingsTabs = [
@@ -151,7 +152,7 @@ function SettingsPageContent() {
             <ApiDocsCard />
           </div>
         </TabsContent>
-        <TabsContent value="backup"><BackupSettingsCard /></TabsContent>
+        <TabsContent value="backup" className="space-y-4"><BackupSettingsCard /><BackupCard /></TabsContent>
       </Tabs>
       <CPAPoolDialog />
       <ImportBrowserDialog />

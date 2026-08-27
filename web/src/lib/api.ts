@@ -1664,3 +1664,36 @@ export async function syncSessionMemory(conversationId: string) {
     body: JSON.stringify({ conversation_id: conversationId }),
   });
 }
+
+// ── Local Backup ─────────────────────────────────────────────────────────────
+
+export type LocalBackup = {
+  filename: string;
+  size_bytes: number;
+  size_human: string;
+  created_at: string;
+};
+
+export async function fetchLocalBackups() {
+  return httpRequest<{ backups: LocalBackup[]; total: number }>("/api/local-backup/list");
+}
+
+export async function createLocalBackup() {
+  return httpRequest<{ ok: boolean; filename?: string; compressed_size?: number; compression_ratio?: string }>(
+    "/api/local-backup/create",
+    { method: "POST" },
+  );
+}
+
+export async function deleteLocalBackup(filename: string) {
+  return httpRequest<{ ok: boolean }>(`/api/local-backup/${encodeURIComponent(filename)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function restoreLocalBackup(filename: string) {
+  return httpRequest<{ ok: boolean; restored_files?: number }>(
+    `/api/local-backup/restore/${encodeURIComponent(filename)}`,
+    { method: "POST" },
+  );
+}
