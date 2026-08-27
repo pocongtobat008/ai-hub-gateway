@@ -1,9 +1,8 @@
-"""Session memory API — provides context summaries from past conversations.
+"""Session memory API — provides context summaries from ALL sessions.
 
-This enables the AI to remember what was discussed in previous sessions,
-giving context continuity across conversations.
-
-Uses the existing conversations.json for storage.
+This enables the AI to remember what was discussed/created in previous sessions
+across ALL providers and tools: chat, image generation, canvas, voiceover, storyboard.
+Gives context continuity across conversations and models.
 """
 
 from __future__ import annotations
@@ -18,6 +17,7 @@ from fastapi import APIRouter, Header
 
 _DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))
 _CONVERSATIONS_FILE = _DATA_DIR / "conversations.json"
+_USAGE_LOG_FILE = _DATA_DIR / "usage_log.json"
 _SESSION_MEMORY_FILE = _DATA_DIR / "session_memory.json"
 
 
@@ -26,6 +26,19 @@ def _load_conversations() -> list[dict[str, Any]]:
         return []
     try:
         with open(_CONVERSATIONS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data
+    except (json.JSONDecodeError, OSError):
+        pass
+    return []
+
+
+def _load_usage_log() -> list[dict[str, Any]]:
+    if not _USAGE_LOG_FILE.exists():
+        return []
+    try:
+        with open(_USAGE_LOG_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
             return data
@@ -55,6 +68,7 @@ def _extract_conversation_summary(conv: dict[str, Any]) -> dict[str, Any]:
     """Extract a lightweight summary from a conversation for context."""
     messages = conv.get("messages", [])
     title = conv.get("title", "Untitled")
+    conv_type = conv.get("type", "chat")
 
     # Get user messages only for topic extraction
     user_messages = [
@@ -77,10 +91,47 @@ def _extract_conversation_summary(conv: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": conv.get("id", ""),
         "title": title,
+        "type": conv_type,
         "topics": topics,
         "message_count": len(messages),
         "last_response_preview": last_response_preview,
         "updated_at": conv.get("updatedAt", ""),
+    }
+
+
+def _extract_usage_summary(entry: dict[str, Any]) -> dict[str, Any]:
+    """Extract summary from usage_log entry (image, canvas, voiceover, etc.)."""
+    provider = entry.get("provider", "unknown")
+    model = entry.get("model", "unknown")
+    prompt = entry.get("prompt", entry.get("input", ""))
+    result_preview = entry.get("result_preview", entry.get("output", ""))[:200]
+    created_at = entry.get("timestamp", entry.get("created_at", ""))
+
+    # Determine type from provider
+    type_map = {
+        "gpt": "chat",
+        "gemini": "chat",
+        "deepseek": "chat",
+        "grok": "chat",
+        "bansos": "chat",
+        "custom": "chat",
+        "image": "image",
+        "canvas": "canvas",
+        "voiceover": "voiceover",
+        "storyboard": "storyboard",
+    }
+    conv_type = type_map.get(provider, provider)
+
+    return {
+        "id": entry.get("id", f"usage-{hash(prompt)}"),
+        "title": f"[{conv_type.upper()}] {prompt[:60]}",
+        "type": conv_type,
+        "provider": provider,
+        "model": model,
+        "topics": prompt[:300] if prompt else "",
+        "message_count": 1,
+        "last_response_preview": result_preview,
+        "updated_at": created_at,
     }
 
 
@@ -90,12 +141,18 @@ def _build_context_string(summaries: list[dict[str, Any]], max_tokens: int = 200
         return ""
 
     lines = ["## Previous Session Context (for continuity):"]
+    lines.append("Remember these past interactions when responding. Reference relevant past work when applicable.")
     token_estimate = 0
 
     for s in summaries:
-        entry = f"- [{s['title']}] Topics: {s['topics']}"
+        conv_type = s.get("type", "chat")
+        provider = s.get("provider", "")
+        provider_tag = f" ({provider})" if provider else ""
+        entry = f"- [{conv_type.upper()}{provider_tag}] {s['title']}"
+        if s.get("topics"):
+            entry += f" | Topics: {s['topics'][:150]}"
         if s.get("last_response_preview"):
-            entry += f" | Last response: {s['last_response_preview'][:150]}"
+            entry += f" | Last: {s['last_response_preview'][:100]}"
         lines.append(entry)
         token_estimate += len(entry) // 4  # rough token estimate
 
@@ -105,18 +162,21 @@ def _build_context_string(summaries: list[dict[str, Any]], max_tokens: int = 200
     return "\n".join(lines)
 
 
+# ── API Routes ───────────────────────────────────────────────────────────────
+
+
 def create_router() -> APIRouter:
     router = APIRouter(prefix="/api/session-memory", tags=["session-memory"])
 
     @router.get("/context")
     def get_context(
-        authorization: str | None = Header(default=None),
         limit: int = 10,
-    ):
-        """Get context summaries from recent conversations for context continuity.
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        """Get context summaries from recent conversations and usage logs.
 
-        Returns a context string that should be injected into the system prompt
-        so the model remembers previous conversations.
+        Returns a context string that can be injected as system context
+        so the model remembers previous conversations across ALL tools.
         """
         from api.support import require_identity
 
@@ -125,24 +185,37 @@ def create_router() -> APIRouter:
             return {"context": "", "summaries": [], "total_conversations": 0}
 
         convs = _load_conversations()
-        # Sort by updatedAt descending, take the most recent N
-        convs.sort(key=lambda x: x.get("updatedAt", ""), reverse=True)
-        recent = convs[:limit]
+        usage = _load_usage_log()
 
-        summaries = [_extract_conversation_summary(c) for c in recent]
-        context_string = _build_context_string(summaries)
+        # Extract summaries from conversations (chat, image)
+        conv_summaries = [_extract_conversation_summary(c) for c in convs]
+
+        # Extract summaries from usage log (all providers)
+        usage_summaries = [_extract_usage_summary(u) for u in usage]
+
+        # Merge and sort by time (most recent first)
+        all_summaries = conv_summaries + usage_summaries
+        all_summaries.sort(key=lambda s: s.get("updated_at", ""), reverse=True)
+
+        # Take top N most recent
+        recent = all_summaries[:limit]
+
+        # Build context string
+        context = _build_context_string(recent)
 
         return {
-            "context": context_string,
-            "summaries": summaries,
+            "context": context,
+            "summaries": recent,
             "total_conversations": len(convs),
+            "total_usage": len(usage),
+            "total_all": len(all_summaries),
         }
 
     @router.get("/summary/{conversation_id}")
     def get_conversation_summary(
         conversation_id: str,
         authorization: str | None = Header(default=None),
-    ):
+    ) -> dict[str, Any]:
         """Get a detailed summary of a specific conversation."""
         from api.support import require_identity
 
@@ -154,66 +227,6 @@ def create_router() -> APIRouter:
         for c in convs:
             if c.get("id") == conversation_id:
                 return _extract_conversation_summary(c)
-
-        return {"error": "Conversation not found"}
-
-    @router.get("/preferences")
-    def get_preferences(authorization: str | None = Header(default=None)):
-        """Get stored user preferences from past interactions."""
-        from api.support import require_identity
-
-        identity = require_identity(authorization)
-        if identity is None:
-            return {"preferences": {}}
-
-        memory = _load_session_memory()
-        return {"preferences": memory.get("user_preferences", {})}
-
-    @router.post("/preferences")
-    def update_preferences(
-        body: dict[str, Any],
-        authorization: str | None = Header(default=None),
-    ):
-        """Update user preferences (model, language, style, etc.)."""
-        from api.support import require_identity
-
-        identity = require_identity(authorization)
-        if identity is None:
-            return {"error": "Unauthorized"}
-
-        memory = _load_session_memory()
-        prefs = memory.get("user_preferences", {})
-        prefs.update(body)
-        memory["user_preferences"] = prefs
-        _save_session_memory(memory)
-        return {"ok": True, "preferences": prefs}
-
-    @router.post("/sync")
-    def sync_session(body: dict[str, Any], authorization: str | None = Header(default=None)):
-        """Sync a conversation summary into session memory for fast access."""
-        from api.support import require_identity
-
-        identity = require_identity(authorization)
-        if identity is None:
-            return {"error": "Unauthorized"}
-
-        conv_id = body.get("conversation_id", "")
-        memory = _load_session_memory()
-        summaries = memory.get("summaries", [])
-
-        # Find conversation and extract summary
-        convs = _load_conversations()
-        for c in convs:
-            if c.get("id") == conv_id:
-                summary = _extract_conversation_summary(c)
-                # Update existing or add new
-                summaries = [s for s in summaries if s.get("id") != conv_id]
-                summaries.insert(0, summary)
-                # Keep max 50 summaries
-                summaries = summaries[:50]
-                memory["summaries"] = summaries
-                _save_session_memory(memory)
-                return {"ok": True, "summary": summary}
 
         return {"error": "Conversation not found"}
 

@@ -61,6 +61,13 @@ function buildPreviewHtml(extracted: { html: string; css: string; js: string }):
   // If we have a full HTML document, use it as-is but inject CSS/JS
   if (html.includes("<!DOCTYPE") || html.includes("<html")) {
     let doc = html;
+    // Inject CSP to allow images from any source
+    const csp = '<meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline; script-src * inline;">';
+    if (doc.includes("<head>")) {
+      doc = doc.replace("<head>", `<head>\n${csp}`);
+    } else if (doc.includes("<!DOCTYPE")) {
+      doc = doc.replace(/(<!DOCTYPE[^>]*>)/, `$1\n<head>${csp}</head>`);
+    }
     if (css && !doc.includes("</head>")) {
       doc = doc.replace("</head>", `<style>${css}</style></head>`);
     } else if (css) {
@@ -80,6 +87,7 @@ function buildPreviewHtml(extracted: { html: string; css: string; js: string }):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:; style-src * inline; script-src * inline;">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -365,8 +373,9 @@ export function CanvasView({ responseText, isStreaming = false, title }: CanvasV
               <iframe
                 ref={iframeRef}
                 className="h-full w-full border-0"
-                sandbox="allow-scripts allow-same-origin"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                 title="Canvas Preview"
+                loading="lazy"
               />
             </div>
           </div>
