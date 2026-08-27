@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from typing import Any, Iterable, Iterator
@@ -136,7 +137,11 @@ def stream_text_chat_completion(
     created = int(time.time())
     sent_role = False
     request = ConversationRequest(model=model, messages=messages, thinking_effort=thinking_effort)
+    _TOKEN_RE = re.compile(r"<｜[^｜]*▁[^｜]*｜>|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>|<\|system\|>|<\|user\|>|<\|assistant\|>|\[INST\]|\[/INST\]|<<SYS>>|<</SYS>>|<s>|</s>|\[BOS\]|\[EOS\]|\[PAD\]|▁")
     for delta_text in stream_text_deltas(backend, request):
+        delta_text = _TOKEN_RE.sub("", delta_text)
+        if not delta_text:
+            continue
         if not sent_role:
             sent_role = True
             yield completion_chunk(model, {"role": "assistant", "content": delta_text}, None, completion_id, created)

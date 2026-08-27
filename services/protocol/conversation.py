@@ -478,6 +478,27 @@ def sanitize_output_text(text: str) -> str:
     text = re.sub(r"(\s*)\ue200([^\ue201]*)\ue201(?=[.,;:!?])", replace_annotation_before_punctuation, text)
     text = re.sub(r"\ue200([^\ue201]*)\ue201", replace_annotation, text)
     text = re.sub(r"\ue200[^\ue201]*$", "", text)
+
+    # Strip model-internal tokens that should never leak to users
+    _INTERNAL_TOKENS = re.compile(
+        r"<｜[^｜]*▁[^｜]*｜>"           # DeepSeek BOS/EOS/pad tokens
+        r"|<\|im_start\|>"              # ChatML start
+        r"|<\|im_end\|>"                # ChatML end
+        r"|<\|endoftext\|>"             # GPT endoftext
+        r"|<\|system\|>"                # ChatML system
+        r"|<\|user\|>"                  # ChatML user
+        r"|<\|assistant\|>"             # ChatML assistant
+        r"|\[INST\]|\[/INST\]"         # Llama inst
+        r"|<<SYS>>|<</SYS>>"             # Llama sys
+        r"|<s>|</s>"                     # SentencePiece BOS/EOS
+        r"|\[BOS\]|\[EOS\]|\[PAD\]"   # Generic tokens
+        r"|▁"                             # SentencePiece whitespace
+    )
+    text = _INTERNAL_TOKENS.sub("", text)
+
+    # Strip any remaining angle-bracket token-like artifacts
+    text = re.sub(r"<｜[^>]*>", "", text)
+
     return text
 
 
