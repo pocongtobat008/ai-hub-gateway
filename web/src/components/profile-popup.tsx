@@ -234,7 +234,7 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 text-white shadow-lg shadow-stone-500/25">
               <Sparkles className="size-5" />
             </div>
             <div>
@@ -259,14 +259,14 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
               onClick={() => setActiveTab(key)}
               className={`relative flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-all ${
                 activeTab === key
-                  ? "border-violet-500 text-violet-600 dark:text-violet-400"
+                  ? "border-stone-500 text-stone-700 dark:text-stone-400"
                   : "border-transparent text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
               }`}
             >
               <Icon className="size-3.5" />
               {label}
               {count !== null && count > 0 && (
-                <span className="ml-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                <span className="ml-0.5 rounded-full bg-stone-100 px-1.5 py-0.5 text-[9px] font-bold text-stone-700 dark:bg-stone-900/30 dark:text-stone-400">
                   {count}
                 </span>
               )}
@@ -308,11 +308,11 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, tone: value } })}
                           className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
                             profile.personality.tone === value
-                              ? "border-violet-500 bg-violet-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/10"
+                              ? "border-stone-500 bg-stone-50 shadow-sm dark:border-stone-400 dark:bg-stone-500/10"
                               : "border-stone-100 bg-white hover:border-stone-200 hover:bg-stone-50 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10"
                           }`}
                         >
-                          <p className={`text-xs font-semibold ${profile.personality.tone === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className={`text-xs font-semibold ${profile.personality.tone === value ? "text-stone-800 dark:text-stone-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
                           <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
@@ -329,7 +329,7 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, language: value } })}
                           className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                             profile.personality.language === value
-                              ? "border-violet-500 bg-violet-50 text-violet-700 dark:border-violet-400 dark:bg-violet-500/10 dark:text-violet-300"
+                              ? "border-stone-500 bg-stone-50 text-stone-800 dark:border-stone-400 dark:bg-stone-500/10 dark:text-stone-300"
                               : "border-stone-100 bg-white text-stone-500 hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02] dark:text-stone-400"
                           }`}
                         >
@@ -349,11 +349,11 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, verbosity: value } })}
                           className={`rounded-xl border px-3 py-2.5 text-center transition-all ${
                             profile.personality.verbosity === value
-                              ? "border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10"
+                              ? "border-stone-500 bg-stone-50 dark:border-stone-400 dark:bg-stone-500/10"
                               : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02]"
                           }`}
                         >
-                          <p className={`text-xs font-semibold ${profile.personality.verbosity === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className={`text-xs font-semibold ${profile.personality.verbosity === value ? "text-stone-800 dark:text-stone-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
                           <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
@@ -370,18 +370,18 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                           onClick={() => setProfile({ ...profile, personality: { ...profile.personality, expertise_level: value } })}
                           className={`rounded-xl border px-3 py-2 text-center transition-all ${
                             profile.personality.expertise_level === value
-                              ? "border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10"
+                              ? "border-stone-500 bg-stone-50 dark:border-stone-400 dark:bg-stone-500/10"
                               : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02]"
                           }`}
                         >
-                          <p className={`text-xs font-semibold ${profile.personality.expertise_level === value ? "text-violet-700 dark:text-violet-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
+                          <p className={`text-xs font-semibold ${profile.personality.expertise_level === value ? "text-stone-800 dark:text-stone-300" : "text-stone-700 dark:text-stone-200"}`}>{label}</p>
                           <p className="text-[10px] text-stone-400">{desc}</p>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <Button onClick={() => void handleSavePersonality()} disabled={isSaving} className="w-full bg-violet-600 hover:bg-violet-700">
+                  <Button onClick={() => void handleSavePersonality()} disabled={isSaving} className="w-full bg-stone-700 hover:bg-stone-800">
                     {isSaving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                     Save Personality
                   </Button>
@@ -410,13 +410,13 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                         key={skill.id}
                         className={`group flex items-center gap-3 rounded-xl border px-3 py-3 transition-all ${
                           skill.enabled
-                            ? "border-violet-200 bg-violet-50/50 dark:border-violet-500/20 dark:bg-violet-500/5"
+                            ? "border-stone-200 bg-stone-50/50 dark:border-stone-500/20 dark:bg-stone-500/5"
                             : "border-stone-100 bg-white hover:border-stone-200 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10"
                         }`}
                       >
                         <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition ${
                           skill.enabled
-                            ? "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400"
+                            ? "bg-stone-100 text-stone-700 dark:bg-stone-500/20 dark:text-stone-400"
                             : "bg-stone-100 text-stone-400 dark:bg-white/5 dark:text-stone-500"
                         }`}>
                           <SkillIcon icon={iconKey} className="size-4" />
@@ -441,7 +441,7 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                             disabled={togglingId === skill.id}
                             className={`flex size-8 items-center justify-center rounded-full border-2 transition-all ${
                               skill.enabled
-                                ? "border-violet-500 bg-violet-500 text-white shadow-sm shadow-violet-500/25"
+                                ? "border-stone-500 bg-stone-500 text-white shadow-sm shadow-stone-500/25"
                                 : "border-stone-200 bg-white text-stone-300 hover:border-stone-300 dark:border-white/10 dark:bg-transparent dark:text-stone-600"
                             }`}
                           >
@@ -458,8 +458,8 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
 
                   {/* Add Skill Form */}
                   {addSkillOpen && (
-                    <div className="rounded-xl border border-dashed border-violet-300 bg-violet-50/50 p-4 dark:border-violet-500/30 dark:bg-violet-500/5">
-                      <p className="mb-3 text-xs font-semibold text-violet-700 dark:text-violet-300">New Custom Skill</p>
+                    <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50/50 p-4 dark:border-stone-500/30 dark:bg-stone-500/5">
+                      <p className="mb-3 text-xs font-semibold text-stone-800 dark:text-stone-300">New Custom Skill</p>
                       <div className="space-y-2">
                         <div className="flex gap-2">
                           <Input value={newSkill.id} onChange={(e) => setNewSkill({ ...newSkill, id: e.target.value })} placeholder="skill-id (e.g. math-tutor)" className="h-8 text-xs" />
@@ -469,7 +469,7 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                         <Textarea value={newSkill.system_prompt} onChange={(e) => setNewSkill({ ...newSkill, system_prompt: e.target.value })} placeholder="System prompt: tell AI how to behave when this skill is active..." className="min-h-[60px] text-xs" rows={2} />
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost" onClick={() => setAddSkillOpen(false)} className="text-xs">Cancel</Button>
-                          <Button size="sm" onClick={() => void handleAddSkill()} className="bg-violet-600 hover:bg-violet-700 text-xs">Add Skill</Button>
+                          <Button size="sm" onClick={() => void handleAddSkill()} className="bg-stone-700 hover:bg-stone-800 text-xs">Add Skill</Button>
                         </div>
                       </div>
                     </div>
@@ -497,15 +497,15 @@ export function ProfilePopup({ open, onClose }: ProfilePopupProps) {
                   <div className="rounded-xl border border-stone-100 bg-stone-50 p-4 dark:border-white/5 dark:bg-white/[0.02]">
                     <p className="mb-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">💡 Writing effective instructions:</p>
                     <ul className="space-y-1.5 text-[11px] text-stone-400">
-                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Be specific about format and structure</li>
-                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Set response boundaries (length, style)</li>
-                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Define behavior for code, images, data</li>
-                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Add your preferred language and tone</li>
-                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-violet-400" /> Use bullet points for readability</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-stone-400" /> Be specific about format and structure</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-stone-400" /> Set response boundaries (length, style)</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-stone-400" /> Define behavior for code, images, data</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-stone-400" /> Add your preferred language and tone</li>
+                      <li className="flex items-start gap-1.5"><span className="mt-0.5 size-1 shrink-0 rounded-full bg-stone-400" /> Use bullet points for readability</li>
                     </ul>
                   </div>
 
-                  <Button onClick={() => void handleSaveInstructions()} disabled={isSaving} className="w-full bg-violet-600 hover:bg-violet-700">
+                  <Button onClick={() => void handleSaveInstructions()} disabled={isSaving} className="w-full bg-stone-700 hover:bg-stone-800">
                     {isSaving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                     Save Instructions
                   </Button>
