@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDown, Compass, Download, Eye, History, LoaderCircle, Paperclip, Plus, Share2, Shield, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { ChatComposer, type ComposerAccount, type ComposerFile, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
+import { ChatComposer, type CanvasLang, type ComposerAccount, type ComposerFile, type ComposerGem, type ComposerImage, type ComposerTool } from "./components/chat-composer";
 import { ChatMessageView, DateSeparator } from "./components/chat-message";
 import { CanvasView } from "./components/canvas-view";
 import { streamChatCompletion } from "./components/stream";
@@ -255,6 +255,7 @@ function ChatPageContent() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
   const [previewCode, setPreviewCode] = useState<{ code: string; language: string } | null>(null);
+  const [canvasLang, setCanvasLang] = useState<CanvasLang>("html");
 
   // Listen for preview-code events from code blocks
   useEffect(() => {
@@ -768,20 +769,36 @@ function ChatPageContent() {
       try {
         let content = "";
         if (tool === "canvas" || tool === "infinite-canvas") {
-          // Canvas tool: send AI prompt to generate HTML/CSS/JS code
+          // Canvas tool: generate code in the selected language
+          const langLabels: Record<string, string> = {
+            html: "HTML/CSS/JS",
+            jsx: "React JSX",
+            vue: "Vue SFC",
+            svelte: "Svelte",
+            css: "CSS",
+            js: "JavaScript",
+            ts: "TypeScript",
+            python: "Python",
+            ruby: "Ruby",
+            json: "JSON",
+            markdown: "Markdown",
+          };
+          const langLabel = langLabels[canvasLang] || canvasLang;
+          const langBlockTag = ["html", "htm"].includes(canvasLang) ? "html" : canvasLang;
+          const isFrontend = ["html", "jsx", "vue", "svelte", "css"].includes(canvasLang);
+
           const canvasPrompt = [
-            `You are a creative web developer. Generate a complete, working HTML/CSS/JS implementation based on this request:`,
+            `You are an expert developer. Generate a complete, working ${langLabel} implementation based on this request:`,
             ``,
             `User request: ${userText}`,
             ``,
             `Rules:`,
-            `- Output a single complete HTML file with embedded CSS and JS`,
-            `- Use modern CSS (flexbox, grid, variables, animations)`,
-            `- Make it responsive and visually polished`,
-            `- Use realistic placeholder content (Lorem ipsum for text, placeholder.com for images)`,
-            `- Include all necessary code in one HTML file with <style> and <script> tags`,
+            isFrontend
+              ? `- Output a single complete file with embedded CSS and JS if applicable`
+              : `- Output complete, well-structured ${langLabel} code`,
             `- Make it production-quality, not a prototype`,
-            `- Output ONLY the code in a single \`\`\`html code block, no explanations`,
+            `- Use realistic placeholder content`,
+            `- Output ONLY the code in a single triple-backtick ${langBlockTag} code block, no explanations`,
           ].join("\n");
           // Use streaming to generate canvas content
           const canvasController = new AbortController();
@@ -789,7 +806,7 @@ function ChatPageContent() {
           await streamChatCompletion({
             model,
             messages: [
-              { role: "system", content: "You are an expert web developer. Generate complete, working HTML/CSS/JS code. Output ONLY the code in a single html code block." },
+              { role: "system", content: `You are an expert developer. Generate complete, working ${langLabel} code. Output ONLY the code in a single triple-backtick ${langBlockTag} code block.` },
               { role: "user", content: canvasPrompt },
             ],
             reasoningEffort,
@@ -1077,7 +1094,9 @@ function ChatPageContent() {
                     const isCanvasMessage = (tool === "canvas" || tool === "infinite-canvas") &&
                       message.role === "assistant" &&
                       typeof message.content === "string" &&
-                      (message.content.includes("```html") || message.content.includes("```css") || message.content.includes("```js") || message.content.includes("```javascript"));
+                      (message.content.includes("```html") || message.content.includes("```css") || message.content.includes("```js") || message.content.includes("```javascript") ||
+                       message.content.includes("```jsx") || message.content.includes("```tsx") || message.content.includes("```vue") ||
+                       message.content.includes("```python") || message.content.includes("```ruby") || message.content.includes("```json"));
                     return (
                       <React.Fragment key={message.id}>
                         {showDateSep && <DateSeparator date={message.createdAt} />}
@@ -1220,6 +1239,8 @@ function ChatPageContent() {
             onGemChange={setGem}
             onAccountChange={setAccountId}
             onToolChange={setTool}
+            canvasLang={canvasLang}
+            onCanvasLangChange={setCanvasLang}
             onImagesChange={handleImagesChange}
             onRemoveImage={handleRemoveImage}
             onFilesChange={handleFilesChange}

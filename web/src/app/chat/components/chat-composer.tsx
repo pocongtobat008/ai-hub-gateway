@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Atom, Box, Check, Clapperboard, Compass, FileText, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
+import { ArrowUp, Atom, Box, Check, Clapperboard, Code2, Compass, FileText, ImagePlus, Layers, Monitor, Paperclip, Shield, Square, Wand2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,6 +39,30 @@ export type ComposerAccount = {
 
 export type ComposerTool = "auto" | "image" | "canvas" | "infinite-canvas" | "video" | "research" | "anti-slop";
 
+export type CanvasLang = "html" | "jsx" | "vue" | "svelte" | "css" | "js" | "ts" | "python" | "ruby" | "json" | "markdown";
+
+export const CANVAS_LANG_OPTIONS: Array<{ value: CanvasLang; label: string; ext: string }[]> = [
+  [
+    { value: "html", label: "HTML", ext: ".html" },
+    { value: "jsx", label: "React (JSX)", ext: ".jsx" },
+    { value: "vue", label: "Vue", ext: ".vue" },
+  ],
+  [
+    { value: "js", label: "JavaScript", ext: ".js" },
+    { value: "ts", label: "TypeScript", ext: ".ts" },
+    { value: "css", label: "CSS", ext: ".css" },
+  ],
+  [
+    { value: "python", label: "Python", ext: ".py" },
+    { value: "ruby", label: "Ruby", ext: ".rb" },
+    { value: "json", label: "JSON", ext: ".json" },
+  ],
+  [
+    { value: "svelte", label: "Svelte", ext: ".svelte" },
+    { value: "markdown", label: "Markdown", ext: ".md" },
+  ],
+];
+
 export const TOOL_OPTIONS: Array<{ value: ComposerTool; label: string; icon: React.ElementType; desc: string }> = [
   { value: "auto", label: "Auto", icon: Atom, desc: "Let AI decide the best model" },
   { value: "image", label: "Image Gen", icon: Layers, desc: "Generate images with AI" },
@@ -70,6 +94,8 @@ type ChatComposerProps = {
   onGemChange: (value: string) => void;
   onAccountChange: (value: string) => void;
   onToolChange: (value: ComposerTool) => void;
+  canvasLang: CanvasLang;
+  onCanvasLangChange: (value: CanvasLang) => void;
   onImagesChange: (files: File[]) => void | Promise<void>;
   onRemoveImage: (id: string) => void;
   onFilesChange: (files: File[]) => void | Promise<void>;
@@ -105,6 +131,8 @@ export function ChatComposer({
   onGemChange,
   onAccountChange,
   onToolChange,
+  canvasLang,
+  onCanvasLangChange,
   onImagesChange,
   onRemoveImage,
   onFilesChange,
@@ -117,6 +145,7 @@ export function ChatComposer({
   const [isDragging, setIsDragging] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [canvasLangOpen, setCanvasLangOpen] = useState(false);
 
   const selectedTool = TOOL_OPTIONS.find((t) => t.value === tool) || TOOL_OPTIONS[0];
   const selectedModelLabel = model || "auto";
@@ -379,6 +408,50 @@ export function ChatComposer({
                     })}
                   </PopoverContent>
                 </Popover>
+
+                {/* Canvas language selector — only when canvas tool active */}
+                {(tool === "canvas" || tool === "infinite-canvas") && (
+                  <Popover open={canvasLangOpen} onOpenChange={setCanvasLangOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700 transition-all duration-200 min-h-[40px] sm:h-9 sm:px-3 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+                      >
+                        <Code2 className="size-3.5" />
+                        <span className="hidden sm:inline">{canvasLang.toUpperCase()}</span>
+                        <svg className="size-2.5 opacity-50" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5l3 3 3-3" /></svg>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" sideOffset={8} className="w-56 p-1.5 rounded-2xl bg-white border border-stone-200 shadow-xl z-[120] dark:bg-stone-900 dark:border-white/10 dark:shadow-2xl">
+                      <p className="px-3 pt-1 pb-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Canvas Language</p>
+                      {CANVAS_LANG_OPTIONS.map((group, gi) => (
+                        <div key={gi}>
+                          {gi > 0 && <div className="my-1 border-t border-stone-100 dark:border-white/5" />}
+                          {group.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                onCanvasLangChange(opt.value);
+                                setCanvasLangOpen(false);
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[12px] font-medium transition-all",
+                                canvasLang === opt.value
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                  : "text-stone-600 hover:bg-stone-50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-white",
+                              )}
+                            >
+                              {canvasLang === opt.value && <Check className="size-3 shrink-0" />}
+                              <span>{opt.label}</span>
+                              <span className="ml-auto text-[10px] text-stone-400 dark:text-stone-500">{opt.ext}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
 
                 {/* Model selector */}
                 <div className="relative shrink-0">
