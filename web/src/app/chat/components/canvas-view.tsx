@@ -279,7 +279,7 @@ function wrapCodeAsPreview(lang: string, code: string): string {
 </html>`;
   }
 
-  // For other JS/TS — wrap as a script in HTML
+  // For other JS/TS — wrap as a script in HTML with console capture
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -290,21 +290,38 @@ function wrapCodeAsPreview(lang: string, code: string): string {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 16px; background: #fafafa; }
     .output { padding: 16px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; min-height: 100px; }
-    .error { color: #dc2626; padding: 12px; background: #fef2f2; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+    .error { color: #dc2626; padding: 12px; background: #fef2f2; border-radius: 8px; font-family: monospace; white-space: pre-wrap; margin: 8px 0; }
+    .info { color: #6b7280; padding: 12px; background: #f9fafb; border-radius: 8px; font-size: 13px; margin: 8px 0; }
+    .label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; overflow: auto; font-size: 13px; line-height: 1.5; }
   </style>
 </head>
 <body>
-  <div id="output" class="output"></div>
+  <div class="label">Console Output</div>
+  <div id="output" class="output"><div class="info">Running code...</div></div>
+  <div class="label" style="margin-top:16px;">Source Code</div>
+  <pre id="source"></pre>
   <script>
     const out = document.getElementById('output');
+    const src = document.getElementById('source');
+    src.textContent = ${JSON.stringify(code)};
+    let hasOutput = false;
     const _log = console.log;
     const _err = console.error;
-    console.log = (...a) => { _log(...a); out.innerHTML += '<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">' + a.map(x => typeof x === 'object' ? JSON.stringify(x,null,2) : String(x)).join(' ') + '</div>'; };
-    console.error = (...a) => { _err(...a); out.innerHTML += '<div style="color:#dc2626;padding:4px 0;font-size:13px;">' + a.map(String).join(' ') + '</div>'; };
+    const _warn = console.warn;
+    console.log = (...a) => { _log(...a); hasOutput = true; out.innerHTML += '<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">' + a.map(x => { try { return typeof x === 'object' ? JSON.stringify(x,null,2) : String(x); } catch { return String(x); } }).join(' ') + '</div>'; };
+    console.error = (...a) => { _err(...a); hasOutput = true; out.innerHTML += '<div class="error">' + a.map(String).join(' ') + '</div>'; };
+    console.warn = (...a) => { _warn(...a); hasOutput = true; out.innerHTML += '<div style="color:#d97706;padding:4px 0;font-size:13px;">' + a.map(String).join(' ') + '</div>'; };
     try {
       ${code}
+      // Check if output was produced after a tick
+      setTimeout(() => {
+        if (!hasOutput) {
+          out.innerHTML = '<div class="info">No console output. Code executed successfully. Add console.log() to see output.</div>';
+        }
+      }, 100);
     } catch(e) {
-      out.innerHTML += '<div class="error">' + e.message + '</div>';
+      out.innerHTML = '<div class="error">Error: ' + e.message + (e.stack ? '\n' + e.stack.split('\n').slice(0,5).join('\n') : '') + '</div>';
     }
   <\/script>
 </body>
@@ -352,7 +369,7 @@ function buildPreviewHtml(extracted: { html: string; css: string; js: string; de
   const { html, css, js, detectedLang } = extracted;
 
   // If we have a non-HTML language that needs wrapping
-  if (!html && !css && detectedLang && ["jsx", "tsx", "react", "vue", "svelte", "py", "python", "rb", "ruby", "json", "yaml", "yml", "markdown", "md"].includes(detectedLang)) {
+  if (!html && !css && detectedLang && ["jsx", "tsx", "react", "vue", "svelte", "py", "python", "rb", "ruby", "json", "yaml", "yml", "markdown", "md", "js", "javascript", "ts", "typescript", "css", "scss", "less"].includes(detectedLang)) {
     const code = js || css || "";
     if (code) return wrapCodeAsPreview(detectedLang, code);
   }
