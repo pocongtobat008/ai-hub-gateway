@@ -116,6 +116,7 @@ export function ChatComposer({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [toolOpen, setToolOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
 
   const selectedTool = TOOL_OPTIONS.find((t) => t.value === tool) || TOOL_OPTIONS[0];
   const selectedModelLabel = model || "auto";
@@ -285,27 +286,45 @@ export function ChatComposer({
             <div className="flex items-end justify-between gap-1.5 rounded-b-[20px] border-t border-stone-100/80 bg-white/80 px-1.5 pt-1.5 pb-2 backdrop-blur-sm dark:border-white/5 dark:bg-white/3 sm:rounded-b-none sm:px-6 sm:pb-4 sm:pt-3 sm:gap-2" onClick={(event) => event.stopPropagation()}>
               <div className="hide-scrollbar flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
 
-                {/* Image / File attach */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-stone-200/60 bg-white/50 text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[40px] min-w-[40px] sm:h-9 sm:px-3.5 sm:min-w-auto sm:justify-start sm:gap-1.5 sm:text-xs dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
-                  aria-label="Attach file"
-                  title="Attach file or image (paste or drag also works)"
-                >
-                  <Paperclip className="size-4 sm:size-3.5" />
-                  <span className="hidden sm:inline">Attach</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-stone-200/60 bg-white/50 text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[40px] min-w-[40px] sm:h-9 sm:px-3.5 sm:min-w-auto sm:justify-start sm:gap-1.5 sm:text-xs dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
-                  aria-label="Attach image"
-                  title="Attach image for vision / editing"
-                >
-                  <ImagePlus className="size-4 sm:size-3.5" />
-                  <span className="hidden sm:inline">Image</span>
-                </button>
+                {/* Attachment dropdown (file + image in one) */}
+                <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-stone-200/60 bg-white/50 px-2.5 text-stone-600 backdrop-blur-sm transition-all duration-200 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 hover:scale-105 active:scale-95 min-h-[40px] min-w-[40px] sm:h-9 sm:px-3.5 dark:border-white/8 dark:bg-white/5 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+                      aria-label="Attach"
+                      title="Attach file or image"
+                    >
+                      <Paperclip className="size-4 sm:size-3.5" />
+                      <span className="hidden sm:inline text-xs">Attach</span>
+                      <svg className="size-2.5 opacity-50" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5l3 3 3-3" /></svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" sideOffset={8} className="w-48 p-1.5 rounded-2xl bg-white border border-stone-200 shadow-xl z-[120] dark:bg-stone-900 dark:border-white/10 dark:shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={() => { fileInputRef.current?.click(); setAttachOpen(false); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white transition-all"
+                    >
+                      <Paperclip className="size-4 shrink-0" />
+                      <div>
+                        <div className="font-medium">File</div>
+                        <div className="text-[10px] text-stone-400 dark:text-stone-500">Documents, code, any file</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { imageInputRef.current?.click(); setAttachOpen(false); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white transition-all"
+                    >
+                      <ImagePlus className="size-4 shrink-0" />
+                      <div>
+                        <div className="font-medium">Image</div>
+                        <div className="text-[10px] text-stone-400 dark:text-stone-500">Vision, edit, analyze</div>
+                      </div>
+                    </button>
+                  </PopoverContent>
+                </Popover>
 
                 {/* Tool selector — PROPER DROPDOWN */}
                 <Popover open={toolOpen} onOpenChange={setToolOpen}>
